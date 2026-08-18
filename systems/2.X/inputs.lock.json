@@ -1,0 +1,61 @@
+{
+  "format": "bbk-h1-inputs-v2",
+  "files": [
+    {
+      "path": ".local/inputs/H1-V2.20-super-recovery.exe",
+      "bytes": 462206976,
+      "sha256": "8F4B305777C3DD36E5FB460D9CCBE5F3D397999CF832C82895F074FC8761681F",
+      "required": true,
+      "kind": "official"
+    },
+    {
+      "path": ".local/inputs/H1-V2.20-SD-recovery.rar",
+      "bytes": 443697917,
+      "sha256": "794B8D79B15847B35916CE6BB7B0D39D59F5D2D470F18D8453AC8E71EF97EB54",
+      "required": true,
+      "kind": "official"
+    },
+    {
+      "path": ".local/derived/v2-loader.bin",
+      "bytes": 5192,
+      "sha256": "B8F5D40381672D27854FDCA5D8FE480EF6D3DA317096CFC8EE8A25B18D37F160",
+      "required": false,
+      "kind": "derived"
+    },
+    {
+      "path": ".local/derived/v2-uboot.bin",
+      "bytes": 44624,
+      "sha256": "8577B6CAE9B90866B898FEDF3FA3ABB1FB88A2098E16A0E36E39E9BED605C8A1",
+      "required": false,
+      "kind": "derived"
+    },
+    {
+      "path": ".local/derived/v2-os.bin",
+      "bytes": 796272,
+      "sha256": "FA77B06A6C0D1679FE672FC9ABC7C3A7E4EA9374F8D5A6E6A9D2686D1891886C",
+      "required": false,
+      "kind": "derived"
+    },
+    {
+      "path": ".local/derived/v2-extos1.bin",
+      "bytes": 3676424,
+      "sha256": "BE6313C6C634E00331C463DFC12C92DEDFD43BCF173A58EF5CA4BDB062B62767",
+      "required": false,
+      "kind": "derived"
+    },
+    {
+      "path": ".local/derived/v2-extos2.bin",
+      "bytes": 1150608,
+      "sha256": "339BE4FEB60565EA475C17A2EA668C0FBC58ADE9E83380ADF6A25028EDABC57C",
+      "required": false,
+      "kind": "derived"
+    },
+    {
+      "path": ".local/derived/h1-v2-system.raw",
+      "bytes": 1107296256,
+      "sha256": "8283D51E341B3552FC4EC9BDBBD57640AA4D01C86B46C616F587FFD709A59151",
+      "required": false,
+      "kind": "derived"
+    }
+  ]
+}

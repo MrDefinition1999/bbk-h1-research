@@ -2,6 +2,39 @@
 
 Last updated: 2026-07-23 (Asia/Irkutsk)
 
+## 2026-08-18 source-project split cleanup
+
+The workspace was reduced while materializing the independent `systems/1.X`
+and `systems/2.X` source projects. A checked-in cleanup script,
+`scripts/recycle_h1_transients.ps1`, resolved every target inside the workspace
+and moved it to the Windows Recycle Bin. No project file was permanently
+deleted.
+
+The cleanup selected 367 obsolete or reproducible targets totaling
+24,176,284,352 bytes (22.516 GiB). These included superseded NAND copies,
+Mission geometry experiments, extracted QEMU/toolchain trees, compiler and
+Python caches, old captures, logs, and duplicate release/test directories.
+Running the same script again with `-WhatIf` selected zero targets.
+
+Post-cleanup logical sizes are:
+
+```text
+work/:           2,549,088,255 bytes (2.374 GiB)
+whole workspace: 6,777,147,502 bytes (6.312 GiB)
+```
+
+The retained canonical inputs and runtime state were hash-checked after
+cleanup: both V1.41 archives, both official V2.20 packages, the canonical V1
+NAND, the V2 runtime-probe NAND, and the current V1-game-on-V2 compatibility
+NAND. The private source area, publication checkouts, deliverables, and both
+new system project trees remain present. No workspace QEMU or Python research
+process remained active.
+
+This section supersedes older size and retention snapshots below. Future
+milestones keep only the current canonical image plus the minimum evidence
+needed to reproduce the conclusion. Cleanup remains recoverable through the
+Recycle Bin until the user empties it.
+
 ## Storage incident check
 
 The workspace was inspected after it reached 9.577 GiB under `work/`. No QEMU

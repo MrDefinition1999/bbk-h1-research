@@ -31,6 +31,14 @@ accidentally mixed with assumptions copied from H2 or 9588.
   PGM baseline, H1 memory feasibility, and the game-specific port plan.
 - [14-rebuild-status.md](14-rebuild-status.md): post-incident source recovery,
   verified toolchains, regression results, and remaining trusted-input gates.
+- [15-open-source-projects.md](15-open-source-projects.md): the independent
+  1.X/2.X source projects and their shared pinned components.
+- [16-v2-system.md](16-v2-system.md): verified V2.20 extraction, boot, NAND,
+  and emulator state.
+- [17-v1-validation.md](17-v1-validation.md): verified V1.41 inputs and runtime
+  reproduction state.
+- [19-v1-v2-mission-handoff.md](19-v1-v2-mission-handoff.md): live V1-game-on-V2
+  compatibility status; the historical filename is retained for stable links.
 
 ## Current phase
 

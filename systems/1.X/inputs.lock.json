@@ -1,0 +1,33 @@
+{
+  "format": "bbk-h1-inputs-v1",
+  "files": [
+    {
+      "path": ".local/inputs/@ibox H1 V1.41CJXTHF.rar",
+      "bytes": 467351318,
+      "sha256": "0FD2ADB0C3AFFD71577CEDF5C6267151661B46A623F888E05B6EB6AF9EA2CBC1",
+      "required": true,
+      "kind": "official"
+    },
+    {
+      "path": ".local/inputs/H1 V1.41SDKHF.rar",
+      "bytes": 431553838,
+      "sha256": "0F65CF4CC7D4D099376F218A5845F223F548340F528AF5B6969ACC7A5AB63A4A",
+      "required": true,
+      "kind": "official"
+    },
+    {
+      "path": ".local/derived/project.bin",
+      "bytes": 5729640,
+      "sha256": "D05786E442F9AAD62A8D0A0CB4F6D786BDC7C2FA353A7A2B152C9ED9F01B40EF",
+      "required": false,
+      "kind": "derived"
+    },
+    {
+      "path": ".local/derived/h1-v1-template.raw",
+      "bytes": 1107296256,
+      "sha256": "614B0E5F85CA262A84BF26C7AD024043B32CE4CC6756D1C741E006846E134012",
+      "required": false,
+      "kind": "derived"
+    }
+  ]
+}

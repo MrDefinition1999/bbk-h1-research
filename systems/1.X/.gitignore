@@ -1,0 +1,25 @@
+# Proprietary and generated local state
+/.local/
+/build/
+/dist/
+__pycache__/
+*.py[cod]
+*.log
+*.raw
+*.rom
+*.bin
+*.bda
+*.dlx
+*.pak
+*.rar
+*.7z
+*.zip
+*.exe
+*.dll
+*.elf
+*.i64
+*.id0
+*.id1
+*.id2
+*.nam
+*.til

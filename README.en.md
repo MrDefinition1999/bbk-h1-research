@@ -1,27 +1,35 @@
 # BBK H1 reverse engineering
 
-This repository contains reproducible research and tools for the BBK `@ibox H1`
-learning device. The scope covers its JZ4740/XBurst hardware, BDA application
-format, NAND/FTL layout, firmware boot path, and H1 emulator validation.
+This repository contains reproducible research and tooling for the BBK
+`@ibox H1` learning device: JZ4740/XBurst hardware, the BDA application format,
+NAND/FTL, firmware boot, the H1 emulator, and the boundary between 1.X and 2.X.
 
-Start with the [research notebook](docs/README.md), which separates confirmed
-facts, inferences, open questions, and reproduction steps.
+## System projects
+
+- [`systems/1.X`](systems/1.X): independent 1.X reproduction entry point,
+  official-input hashes, and current validation status.
+- [`systems/2.X`](systems/2.X): independent 2.X reproduction entry point,
+  V2 NAND reconstruction, and V1-game compatibility research.
+
+These directories are published separately as
+[`bbk-h1-1x`](https://github.com/MrDefinition1999/bbk-h1-1x) and
+[`bbk-h1-2x`](https://github.com/MrDefinition1999/bbk-h1-2x).
+They contain source, documentation, input hashes, and pinned public components;
+vendor firmware, NAND images, commercial games, IDA databases, and generated
+binaries never enter Git.
 
 ## Repository boundary
 
-- `docs/`: reverse-engineering findings, verification records, and methodology.
-- `scripts/`: firmware, NAND/FTL, BDA, test, and privacy-audit tooling.
-- The SDK, emulator, and KOV game port are maintained as separate projects; see
-  [the project split](docs/15-open-source-projects.md).
+- `docs/`: confirmed results, validation records, open questions, and live state.
+- `scripts/`: firmware, NAND/FTL, BDA, emulator, publication, and privacy tools.
+- `systems/`: the two small version-specific source projects.
 
-Firmware, NAND images, recovery packages, ROMs, IDA databases, runtime logs,
-toolchains, and generated binaries are excluded. The KOV PGM port and real-device
-test package remain private research artifacts.
+The public SDK and emulator remain in
+[`bbk-h1-bda-sdk`](https://github.com/MrDefinition1999/bbk-h1-bda-sdk) and
+[`bbk-h1-emulator`](https://github.com/MrDefinition1999/bbk-h1-emulator).
+See [the open-source structure](docs/15-open-source-projects.md).
 
-中文入口: [README.md](README.md)
+Original source and documentation use the [Apache License 2.0](LICENSE).
+Third-party interface and artwork boundaries are documented in [NOTICE](NOTICE).
 
-## License
-
-Original source code and documentation are licensed under the [Apache License
-2.0](LICENSE). Screenshots and depicted third-party interfaces or artwork are
-research evidence only; see [NOTICE](NOTICE).
+中文: [README.md](README.md)

@@ -1,0 +1,19 @@
+{
+  "format": "bbk-h1-components-v1",
+  "components": [
+    {
+      "name": "bbk-h1-bda-sdk",
+      "directory": "sdk",
+      "url": "https://github.com/MrDefinition1999/bbk-h1-bda-sdk.git",
+      "commit": "352889b9fa9750cd8e4cb4806e5fc0e8edeac211",
+      "license": "Apache-2.0"
+    },
+    {
+      "name": "bbk-h1-emulator",
+      "directory": "emulator",
+      "url": "https://github.com/MrDefinition1999/bbk-h1-emulator.git",
+      "commit": "2416cfc4bb5295a1dad44c1129159620416b3862",
+      "license": "GPL-2.0-and-upstream-QEMU-terms"
+    }
+  ]
+}
