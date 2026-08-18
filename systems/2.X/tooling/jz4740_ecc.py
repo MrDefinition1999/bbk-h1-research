@@ -123,3 +123,59 @@ def jz4740_page_oob_ecc(data: bytes, *, offset: int = 6) -> bytes:
     for start in range(0, PAGE_SIZE, ECC_BLOCK_SIZE):
         output.extend(jz4740_block_ecc(data[start : start + ECC_BLOCK_SIZE]))
     return bytes(output)
+
+
+def jz4740_pages_ecc_numpy(pages: list[bytes]) -> list[bytes]:
+    """Encode many pages with NumPy while preserving the native helper ABI."""
+
+    if any(len(page) != PAGE_SIZE for page in pages):
+        raise ValueError("JZ4740 ECC pages must be exactly 2,048 bytes")
+    if not pages:
+        return []
+    try:
+        import numpy as np
+    except ImportError as error:
+        raise RuntimeError("NumPy is required for batched JZ4740 ECC") from error
+
+    blocks = np.frombuffer(b"".join(pages), dtype=np.uint8).reshape(-1, ECC_BLOCK_SIZE)
+    parity = np.zeros((blocks.shape[0], NROOTS), dtype=np.uint16)
+    index_of = np.asarray(_INDEX_OF, dtype=np.uint16)
+    terms = np.asarray(_TERMS, dtype=np.uint16)
+    for symbol_index in range(DATA_SYMBOLS):
+        if symbol_index < 456:
+            bit = symbol_index * 9
+            byte = bit >> 3
+            shift = bit & 7
+            symbol = blocks[:, byte].astype(np.uint16)
+            if byte + 1 < ECC_BLOCK_SIZE:
+                symbol |= blocks[:, byte + 1].astype(np.uint16) << 8
+            symbol = (symbol >> shift) & NN
+        else:
+            symbol = 0
+        row = terms[index_of[np.bitwise_xor(symbol, parity[:, 0])]]
+        parity[:, : NROOTS - 1] = np.bitwise_xor(
+            parity[:, 1:], row[:, : NROOTS - 1]
+        )
+        parity[:, NROOTS - 1] = row[:, NROOTS - 1]
+
+    packed = parity[:, ::-1] & NN
+    first = (
+        packed[:, 7].astype(np.uint32)
+        | (packed[:, 6].astype(np.uint32) << 9)
+        | (packed[:, 5].astype(np.uint32) << 18)
+        | ((packed[:, 4].astype(np.uint32) & 0x1F) << 27)
+    )
+    second = (
+        ((packed[:, 4].astype(np.uint32) >> 5) & 0x0F)
+        | (packed[:, 3].astype(np.uint32) << 4)
+        | (packed[:, 2].astype(np.uint32) << 13)
+        | (packed[:, 1].astype(np.uint32) << 22)
+        | ((packed[:, 0].astype(np.uint32) & 1) << 31)
+    )
+    encoded = np.empty((blocks.shape[0], PARITY_SIZE), dtype=np.uint8)
+    for byte in range(4):
+        encoded[:, byte] = (first >> (byte * 8)).astype(np.uint8)
+        encoded[:, 4 + byte] = (second >> (byte * 8)).astype(np.uint8)
+    encoded[:, 8] = (packed[:, 0] >> 1).astype(np.uint8)
+    page_rows = encoded.reshape(len(pages), PAGE_SIZE // ECC_BLOCK_SIZE, PARITY_SIZE)
+    return [row.tobytes() for row in page_rows]

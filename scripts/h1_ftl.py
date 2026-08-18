@@ -47,6 +47,7 @@ class ScanResult:
     path: Path
     physical_blocks: int
     scan_start_block: int
+    scan_end_block: int
     records: tuple[FtlRecord, ...]
     mapping: dict[int, FtlRecord]
 
@@ -67,19 +68,25 @@ def read_oob(stream, page: int) -> bytes:
     return value
 
 
-def scan_image(path: Path, scan_start_block: int = DEFAULT_SCAN_START_BLOCK) -> ScanResult:
+def scan_image(
+    path: Path,
+    scan_start_block: int = DEFAULT_SCAN_START_BLOCK,
+    scan_end_block: int | None = None,
+) -> ScanResult:
     image = path.resolve()
     size = image.stat().st_size
     if size == 0 or size % RAW_ERASE_BLOCK_SIZE:
         raise ValueError(f"unsupported H1 NAND geometry: {image} size={size}")
     physical_blocks = size // RAW_ERASE_BLOCK_SIZE
-    if not 0 <= scan_start_block <= physical_blocks:
+    if scan_end_block is None:
+        scan_end_block = physical_blocks
+    if not 0 <= scan_start_block <= scan_end_block <= physical_blocks:
         raise ValueError("FTL scan start is outside the NAND image")
 
     records: list[FtlRecord] = []
     mapping: dict[int, FtlRecord] = {}
     with image.open("rb") as stream:
-        for physical in range(scan_start_block, physical_blocks):
+        for physical in range(scan_start_block, scan_end_block):
             last_page = (physical + 1) * PAGES_PER_ERASE_BLOCK - 1
             bad_marker = read_oob(stream, last_page)[0]
             if bad_marker != 0xFF:
@@ -167,6 +174,7 @@ def scan_image(path: Path, scan_start_block: int = DEFAULT_SCAN_START_BLOCK) -> 
         path=image,
         physical_blocks=physical_blocks,
         scan_start_block=scan_start_block,
+        scan_end_block=scan_end_block,
         records=tuple(records),
         mapping=mapping,
     )
@@ -238,6 +246,7 @@ def summary(result: ScanResult, record_limit: int) -> dict[str, object]:
             "pages_per_ftl_unit": PAGES_PER_FTL_UNIT,
             "physical_blocks": result.physical_blocks,
             "scan_start_block": result.scan_start_block,
+            "scan_end_block": result.scan_end_block,
         },
         "counts": counts,
         "mapped_logical_units": len(result.mapping),
@@ -289,13 +298,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("image", type=Path)
     parser.add_argument("--scan-start-block", type=parse_int, default=DEFAULT_SCAN_START_BLOCK)
+    parser.add_argument(
+        "--scan-end-block",
+        type=parse_int,
+        help="exclusive last physical FTL block (default: end of NAND)",
+    )
     parser.add_argument("--record-limit", type=int, default=64)
     parser.add_argument("--extract", type=Path)
     parser.add_argument("--logical-units", type=parse_int)
     parser.add_argument("--output", type=Path, help="write JSON report")
     args = parser.parse_args()
 
-    result = scan_image(args.image, args.scan_start_block)
+    result = scan_image(args.image, args.scan_start_block, args.scan_end_block)
     report = summary(result, max(0, args.record_limit))
     if args.extract:
         report["extraction"] = extract_volume(result, args.extract, args.logical_units)

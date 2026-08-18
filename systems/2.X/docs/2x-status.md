@@ -715,3 +715,67 @@ JZ4740 ECC/OOB, and validates FAT readback and mapping count. Replacing the
 120,264-byte Time BDA with the 30,964-byte probe touched logical units 709, 711
 and 712 (384 pages); all 1,310 mappings remained present and readback matched
 SHA-256 `DE5682F5375E2446AAED6D58697391FF0BBDCF6E60C6B4E8B8A71F1EFE93D6B7`.
+
+## Native B volume and playable Mission result
+
+IDA analysis closes the earlier storage-model gap. The V2 Resource Manager root
+always inserts `[B:]`, conditionally inserts `[C:]`, and intentionally omits A.
+Its directory walker appends `\\*.*` and calls the V2 find-first, find-next and
+find-close services. The OS path parser maps A/B/C to volume indices 0/1/2.
+
+The NAND FTL scanner has two hard physical windows at 256 KiB per block:
+
+- A: blocks 120 through 1779 (30 MiB through 445 MiB);
+- B: blocks 1780 through 4095 (445 MiB through the 1 GiB device end).
+
+The retained native V2 image contains 1,310 A mappings ending at block 1434 and
+no mapped or BBT record in the B window. The blank B view is therefore original
+behavior, not a failure to expose A. The superseded expanded build allocated A
+records beyond block 1780 and also retained V1 FAT geometry; those records
+crossed the V2 partition boundary.
+
+A writable cold boot created a native empty B volume with four logical mappings
+and one BBT record. Its FAT16 geometry is label `Y100 V2.2`, boot LBA 32, 512
+bytes per sector, 32 sectors per cluster, 480 reserved sectors, two FATs, 512
+root entries, 512 sectors per FAT and 1,149,920 total sectors.
+
+`h1_ftl.py`, `build_h1_system_nand.py` and the in-place FAT replacer now accept
+an exclusive scan-end block. This prevents A allocation or verification from
+crossing `0x6F4`. `merge_h1_v2_b_volume.py` byte-verifies that the boot/A prefix
+comes from the selected base and the B suffix comes from the separately built
+volume. A NumPy batch ECC path reproduces the scalar JZ4740 parity while reducing
+the 77,312-page B build to seconds; the scalar implementation remains the
+dependency-free fallback.
+
+The B filesystem contains the trusted V1 files at
+`B:\应用\数据\游戏\LYXZ`:
+
+| File | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `DataLib.dat` | 157,063,229 | `4E67278C6E5EED5E650E470E788D8BF0C7DE9436F07815AF2DA7A35EEFBC3DE5` |
+| `DataLibIndex.dat` | 180,216 | `7852C4199EA2B7A6D1990DE540844FFDA6A24D2930D6EDF79C477146582A2F79` |
+
+`patch_h1_v2_mission_resource_drive.py` requires exactly five occurrences of
+the Mission-private `A:\应用\数据\游戏\` prefix and changes only each drive
+letter to B. It rejects an unexpected count and proves that no other byte
+changed. This leaves all V2 system paths and all unrelated BDA paths on A.
+
+`navigate_h1_v2_mission.py` performs a fixed cold-boot sequence without taking
+or matching screenshots. It clears the boot prompts, exits the restored native
+application to its remembered category page with one hardware Return, returns
+to the subject desktop with a second Return, normalizes the remembered
+Tools/Entertainment page, and selects the verified external Mission wrapper.
+On 2026-08-18 the user manually confirmed that this first Mission entry enters
+the game and is playable. A subsequent clean-image cold-boot regression reached
+the Mission character-information page using 71 fixed input events and no
+screenshots in the navigation path. The old `V1Loop` entry reported missing
+data and the embedded experiment hung; both were removed by restoring their
+native V2 BDAs.
+
+The cleaned private image is:
+
+```text
+work/v2-emulator/h1-v2-mission-b.raw
+size:    1,107,296,256 bytes
+SHA-256: 529D02B39AD015B1B846C5F83B20ABF6F45B49590B771ED6C32E6994D46E512C
+```

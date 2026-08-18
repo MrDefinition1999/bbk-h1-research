@@ -423,8 +423,16 @@ def materialize(project: Path, version: str) -> None:
     write_text(project / "scripts" / "verify_source_project.py", VERIFY_PROJECT)
 
     excluded = {"build_h1_system_projects.py", "recycle_h1_transients.ps1"}
+    v2_only = {
+        "merge_h1_v2_b_volume.py",
+        "navigate_h1_v2_mission.py",
+        "patch_h1_v2_mission_resource_drive.py",
+        "test_patch_h1_v2_mission_resource_drive.py",
+    }
     for source in sorted((ROOT / "scripts").iterdir()):
         if not source.is_file() or source.name in excluded:
+            continue
+        if version == "1.X" and source.name in v2_only:
             continue
         if source.suffix.casefold() not in {".py", ".ps1", ".c", ".mjs"}:
             continue

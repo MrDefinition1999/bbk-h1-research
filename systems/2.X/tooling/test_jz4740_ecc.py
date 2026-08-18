@@ -3,7 +3,11 @@ from __future__ import annotations
 import random
 import unittest
 
-from jz4740_ecc import jz4740_block_ecc, jz4740_page_oob_ecc
+from jz4740_ecc import (
+    jz4740_block_ecc,
+    jz4740_page_oob_ecc,
+    jz4740_pages_ecc_numpy,
+)
 
 
 class Jz4740EccTests(unittest.TestCase):
@@ -33,6 +37,15 @@ class Jz4740EccTests(unittest.TestCase):
             jz4740_page_oob_ecc(b"\x00" * 2047)
         with self.assertRaises(ValueError):
             jz4740_page_oob_ecc(b"\x00" * 2048, offset=-1)
+
+    def test_numpy_batch_matches_scalar_encoder(self) -> None:
+        randomizer = random.Random(0xBDA2)
+        pages = [
+            bytes(randomizer.randrange(256) for _ in range(2048))
+            for _ in range(3)
+        ]
+        expected = [jz4740_page_oob_ecc(page, offset=0) for page in pages]
+        self.assertEqual(jz4740_pages_ecc_numpy(pages), expected)
 
 
 if __name__ == "__main__":

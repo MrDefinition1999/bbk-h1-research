@@ -47,14 +47,42 @@ The complete Mission BDA and its two DataLib files have been preserved and
 byte-verified. Earlier blank Resource Explorer text and malformed dynamic
 Chinese fonts were not file loss: the expanded image used V1 FAT geometry,
 whereas V2 expects its native `Y100 V2.2` geometry. Global `A:` to `B:` kernel
-replacement was tested and caused a black screen, so path translation must stay
-inside a scoped filesystem shim.
+replacement was tested and caused a black screen, so path translation stays
+inside the Mission payload.
 
-The compatibility wrapper builds and passes static coverage/BDA validation, but
-the complete Mission GUI loop has not yet passed final dynamic validation with
-both DataLib files on a V2-native storage layout. This remains the next runtime
-milestone; no success is claimed until the game screen persists and the trace
-confirms the expected service path.
+The storage layout is now dynamically verified. IDA analysis of the V2 OS
+establishes separate NAND FTL windows: A uses physical blocks 120 through 1779,
+and B uses blocks 1780 through 4095. The original retained V2 image has no B
+records, so Resource Manager showing an empty B drive is the expected factory
+state. A cannot be enlarged across block 1780 without colliding with the V2 B
+scanner.
+
+The guest-created B template uses native `Y100 V2.2` FAT16 geometry with
+1,149,920 sectors. The complete `DataLib.dat` and `DataLibIndex.dat` are stored
+under `B:\应用\数据\游戏\LYXZ`. Exactly five Mission-private
+`A:\应用\数据\游戏\` prefixes are changed to B; the wrapper, V2 OS and every
+other application keep their original A paths. B readback matches both trusted
+V1 hashes.
+
+On 2026-08-18 the fixed-input navigator launched the external compatibility
+wrapper from a cold V2 BootROM boot. The user manually verified that the first
+Mission entry enters the game and is playable. Two older menu experiments were
+also classified: `V1Loop` reports missing Mission data, and the embedded
+Mission experiment hangs. They were replaced with their native V2 applications
+after the result was recorded, leaving only the verified external wrapper.
+
+The navigator now clears restored UI state with two hardware Return events:
+the first leaves the restored application for its remembered category page,
+and the second returns to the subject desktop. A clean-image cold-boot
+regression then reached Mission's character-information page with fixed input
+only (`screenshots_used=false`, 71 input events). One terminal screenshot was
+taken only after navigation completed; no screenshot matching controls the
+route.
+
+The cleaned local image is `work/v2-emulator/h1-v2-mission-b.raw`, 1,107,296,256
+bytes, SHA-256
+`529D02B39AD015B1B846C5F83B20ABF6F45B49590B771ED6C32E6994D46E512C`.
+It remains private and is not a Git artifact.
 
 ## Repository and runtime policy
 
@@ -71,8 +99,8 @@ confirms the expected service path.
 
 ## Next research milestone
 
-Use a V2-native FAT layout with the complete Mission resource tree, run only one
-8793 instance, launch the current state-bridge wrapper, and decode the trace at
-the first failing service if Mission still returns to the desktop. Update the
-rule table, SDK test, this status document, and all affected public repositories
-after each confirmed correction.
+Run longer Mission save/load, audio, touch and normal-exit regression sessions
+against the cleaned image. Keep the successful external wrapper as the control;
+do not reintroduce the missing-data or embedded-hang probes into the final menu.
+Update the rule table, SDK tests, this status document and all affected public
+repositories after each confirmed correction.

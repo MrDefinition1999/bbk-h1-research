@@ -38,7 +38,7 @@ if __package__:
         scan_image,
         sequence_is_newer,
     )
-    from .jz4740_ecc import jz4740_page_oob_ecc
+    from .jz4740_ecc import jz4740_page_oob_ecc, jz4740_pages_ecc_numpy
 else:
     from h1_fat16 import (
         LOGICAL_UNIT_SIZE,
@@ -61,7 +61,7 @@ else:
         scan_image,
         sequence_is_newer,
     )
-    from jz4740_ecc import jz4740_page_oob_ecc
+    from jz4740_ecc import jz4740_page_oob_ecc, jz4740_pages_ecc_numpy
 
 DATA_ECC_OOB_OFFSET = 4
 FTL_LOGICAL_HIGH_BITS = 0xFFFF0000
@@ -148,7 +148,13 @@ class EccEncoder:
         if any(len(page) != PAGE_SIZE for page in pages):
             raise ValueError("ECC input pages must be exactly 2,048 bytes")
         if self.process is None:
-            return [jz4740_page_oob_ecc(page, offset=DATA_ECC_OOB_OFFSET)[4:] for page in pages]
+            try:
+                return jz4740_pages_ecc_numpy(pages)
+            except RuntimeError:
+                return [
+                    jz4740_page_oob_ecc(page, offset=DATA_ECC_OOB_OFFSET)[4:]
+                    for page in pages
+                ]
         assert self.process.stdin is not None and self.process.stdout is not None
         encoded: list[bytes] = []
         # Keep helper output below the Windows anonymous-pipe capacity while
@@ -487,9 +493,10 @@ def verify_output(
     plan: FatPlan,
     system_root: Path,
     scan_start_block: int,
+    scan_end_block: int | None,
 ) -> dict[str, object]:
     started = time.perf_counter()
-    result = scan_image(path, scan_start_block)
+    result = scan_image(path, scan_start_block, scan_end_block)
     if any(record.kind in {"bad", "invalid", "torn"} for record in result.records):
         raise ValueError("output FTL scan contains bad, invalid, or torn slots")
     mapped_records: dict[int, list[FtlRecord]] = {}
@@ -526,6 +533,7 @@ def verify_output(
         "mapped_logical_units": len(result.mapping),
         "duplicate_logical_mappings": len(duplicates),
         "scan_start_block": result.scan_start_block,
+        "scan_end_block": result.scan_end_block,
         "free_slots": sum(record.kind == "free" for record in result.records),
         "bbt_slots": len(bbt_records),
         "invalid_or_torn_slots": sum(
@@ -568,6 +576,11 @@ def main() -> int:
         help="first physical FTL block (default: 0x3e for H1 V1; H1 V2 uses 0x40)",
     )
     parser.add_argument(
+        "--scan-end-block",
+        type=lambda value: int(value, 0),
+        help="exclusive physical FTL boundary; use 0x6F4 for the V2 A volume",
+    )
+    parser.add_argument(
         "--emulator-expanded",
         action="store_true",
         help="allow an emulator-only NAND larger than the 4,096-block production device",
@@ -595,7 +608,11 @@ def main() -> int:
 
     template = args.template.resolve()
     system_root = args.system_data.resolve()
-    template_result = scan_image(template, args.scan_start_block)
+    template_result = scan_image(
+        template,
+        args.scan_start_block,
+        args.scan_end_block,
+    )
     mapping_overrides = apply_mapping_overrides(template_result, args.mapping_override)
     if template_result.physical_blocks != 4096 and not args.emulator_expanded:
         raise ValueError(
@@ -680,6 +697,7 @@ def main() -> int:
                 plan,
                 system_root,
                 args.scan_start_block,
+                args.scan_end_block,
             )
         report["output"] = str(output)
         report["output_bytes"] = temporary.stat().st_size

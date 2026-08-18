@@ -33,9 +33,15 @@ class LocatedEntry:
 
 
 class LogicalVolume:
-    def __init__(self, image: Path, scan_start_block: int, writable: bool = False) -> None:
+    def __init__(
+        self,
+        image: Path,
+        scan_start_block: int,
+        scan_end_block: int | None = None,
+        writable: bool = False,
+    ) -> None:
         self.image = image
-        self.result = scan_image(image, scan_start_block)
+        self.result = scan_image(image, scan_start_block, scan_end_block)
         self.stream = image.open("r+b" if writable else "rb", buffering=0)
         self.cache: dict[int, bytearray] = {}
         self.dirty: set[int] = set()
@@ -231,6 +237,11 @@ def main() -> int:
     parser.add_argument("replacement", type=Path)
     parser.add_argument("--scan-start-block", type=lambda value: int(value, 0), default=0x40)
     parser.add_argument(
+        "--scan-end-block",
+        type=lambda value: int(value, 0),
+        help="exclusive physical FTL boundary; use 0x6F4 for the V2 A volume",
+    )
+    parser.add_argument(
         "--ecc-helper",
         type=Path,
         default=default_ecc_helper(repository),
@@ -244,7 +255,12 @@ def main() -> int:
     replacement = replacement_path.read_bytes()
     helper = None if args.python_ecc else args.ecc_helper.resolve(strict=True)
 
-    volume = LogicalVolume(image, args.scan_start_block, writable=True)
+    volume = LogicalVolume(
+        image,
+        args.scan_start_block,
+        args.scan_end_block,
+        writable=True,
+    )
     try:
         resolver = FatResolver(volume)
         entry = resolver.resolve(args.path)
@@ -270,7 +286,7 @@ def main() -> int:
     finally:
         volume.close()
 
-    check = LogicalVolume(image, args.scan_start_block)
+    check = LogicalVolume(image, args.scan_start_block, args.scan_end_block)
     try:
         checked_resolver = FatResolver(check)
         checked_entry = checked_resolver.resolve(args.path)
@@ -294,6 +310,8 @@ def main() -> int:
         "chain_clusters": len(chain),
         "chain_capacity": capacity,
         "ftl_mapping_count": original_mapping_count,
+        "scan_start_block": volume.result.scan_start_block,
+        "scan_end_block": volume.result.scan_end_block,
         "write": write_report,
         "readback_verified": True,
     }
