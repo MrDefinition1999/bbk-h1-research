@@ -35,6 +35,45 @@ milestones keep only the current canonical image plus the minimum evidence
 needed to reproduce the conclusion. Cleanup remains recoverable through the
 Recycle Bin until the user empties it.
 
+## 2026-08-18 Recycle Bin verification
+
+Before permanent user cleanup, the Windows Recycle Bin was inspected read-only.
+All 190 visible entries originated in this workspace; no unrelated user file
+or directory was present. Their physical payload size was 14,321,131,955 bytes
+(13.338 GiB):
+
+| Class | Items | Bytes | Decision |
+| --- | ---: | ---: | --- |
+| superseded NAND experiments | 9 | 13,287,555,072 | redundant with the retained canonical V1, V2, and compatibility images |
+| derived extraction/release/debug directories | 5 | 1,014,569,596 | reproducible from retained inputs and tracked source |
+| generated V2 screenshots and framebuffer captures | 173 | 18,907,207 | conclusions are documented; captures are reproducible |
+| Python/pytest caches | 2 | 94,020 | regenerated automatically |
+| one-time GitHub transport helper | 1 | 6,060 | no longer needed after exact remote commit verification |
+
+The complete Mission payload was checked before declaring the expanded tree
+redundant:
+
+- `DataLib.dat`: 157,063,229 bytes, SHA-256
+  `4E67278C6E5EED5E650E470E788D8BF0C7DE9436F07815AF2DA7A35EEFBC3DE5`;
+- `DataLibIndex.dat`: 180,216 bytes, SHA-256
+  `7852C4199EA2B7A6D1990DE540844FFDA6A24D2930D6EDF79C477146582A2F79`;
+- the staged `使命.bda`: 529,172 bytes, SHA-256
+  `C103600D5BAED496E8FF7C23FB8FD204731F76B838074689543A150B0A4F9283`.
+
+The two DataLib hashes match files read directly from the retained canonical V1
+NAND. The staged BDA hash matches both retained standalone copies. Critical V1,
+V2, and compatibility NAND hashes and both official V2.20 package hashes were
+also rechecked. The warning in `14-rebuild-status.md` about the two root V1 RAR
+files remains in force; this redundancy conclusion relies on the verified V1
+NAND, not on treating those RAR files as trusted archives.
+
+The original recycle operation reported 24,176,284,352 bytes, while only
+14,321,131,955 bytes remained visible at this audit. The approximately 9.178 GiB
+difference is no longer represented in the Recycle Bin, consistent with Windows
+capacity eviction during a very large recycle operation, and is not recoverable
+from the current bin. Every item that remains visible is redundant and may be
+permanently removed by the user.
+
 ## Storage incident check
 
 The workspace was inspected after it reached 9.577 GiB under `work/`. No QEMU
