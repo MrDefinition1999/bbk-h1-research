@@ -19,11 +19,13 @@ from inspect_h1_fat_path import decode_lfn, decode_short_name
 @dataclass(frozen=True)
 class LocatedEntry:
     short_name: str
+    short_name_raw: bytes
     long_name: str | None
     attributes: int
     first_cluster: int
     size: int
     directory_offset: int
+    lfn_offsets: tuple[int, ...]
 
     @property
     def is_directory(self) -> bool:
@@ -138,7 +140,7 @@ class FatResolver:
 
     def entries(self, first: int | None) -> list[LocatedEntry]:
         output = []
-        lfn_entries: list[bytes] = []
+        lfn_entries: list[tuple[int, bytes]] = []
         for chunk_offset, data in self.directory_chunks(first):
             for within in range(0, len(data), 32):
                 raw = data[within : within + 32]
@@ -149,7 +151,7 @@ class FatResolver:
                     continue
                 attributes = raw[11]
                 if attributes == 0x0F:
-                    lfn_entries.append(raw)
+                    lfn_entries.append((chunk_offset + within, raw))
                     continue
                 if attributes & 0x08:
                     lfn_entries.clear()
@@ -157,11 +159,13 @@ class FatResolver:
                 output.append(
                     LocatedEntry(
                         short_name=decode_short_name(raw[:11]),
-                        long_name=decode_lfn(lfn_entries),
+                        short_name_raw=bytes(raw[:11]),
+                        long_name=decode_lfn([item[1] for item in lfn_entries]),
                         attributes=attributes,
                         first_cluster=struct.unpack_from("<H", raw, 26)[0],
                         size=struct.unpack_from("<I", raw, 28)[0],
                         directory_offset=chunk_offset + within,
+                        lfn_offsets=tuple(item[0] for item in lfn_entries),
                     )
                 )
                 lfn_entries.clear()

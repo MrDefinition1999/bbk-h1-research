@@ -55,8 +55,8 @@ class FatGeometry:
     def validate(self) -> None:
         if self.bytes_per_sector != BYTES_PER_SECTOR:
             raise ValueError("H1 requires 512-byte FAT sectors")
-        if self.sectors_per_cluster != 32:
-            raise ValueError("H1 guest geometry requires 32 sectors per cluster")
+        if self.sectors_per_cluster not in {32, 64}:
+            raise ValueError("H1 guest geometry requires 32 or 64 sectors per cluster")
         if not 4085 <= self.cluster_count <= 0xFFF5:
             raise ValueError(f"geometry is not FAT16-compatible: {self.cluster_count} clusters")
         if (self.cluster_count + 2) * 2 > self.sectors_per_fat * self.bytes_per_sector:

@@ -803,6 +803,93 @@ are not modified by this build.
   MIPS path from a stable 68000 wait state and instrument render, present,
   audio, storage, and main-loop progress at the boundary.
 
+**V5 clock correction and V6 real-H1 frame profiles (2026-08-17):**
+
+- V5 removed the private 1 ms timer from the KOV runtime and derives frame
+  pacing, held-key timing and journals from the firmware's free-running 80 Hz
+  tick. The emulator-only host monotonic clock and cooperative sleep remain
+  behind `H1_KOV_EMULATOR_HOST_YIELD`; they are timing-correction tools, not
+  real-H1 performance evidence.
+- V6 generalizes fixed rendering cadence as `H1_KOV_FIXED_SKIP`. A value of one
+  executes every 68000/Z80 frame, input poll and audio submission, but skips
+  every other renderer and LCD submission. The target is approximately 60
+  logical updates and 30 rendered frames per second without slowing gameplay.
+- Five reproducible profiles are included. Base, adaptive 336 MHz, fixed-30
+  336 MHz, adaptive 384 MHz and fixed-30 384 MHz have respective SHA-256 values
+  `627495DEF00612B75182991C8FFD7AB3B6A356956DC16304819B344AB76A3941`,
+  `1DA1A7F773B8BE70ADEE1029591C8FF512FBCD5D0C991BA30B8397C50543B344`,
+  `8A00EFE17E6D2BFF4C3F2B8A7BF13FDDA2624E6EE71544F957D6340DB15861E6`,
+  `22EFA974B791FC530F4405307D5352B561AF79885A7FB70FA1D37DE930572CE9`
+  and `BC9C96EF3BB120E732C6A1BE9A733CFB3CAE5769A08AA3BC475B7D01E88E86BE`.
+- Every BDA passed structure, icon and Chinese-title validation. Direct binary
+  checks found no host-yield capability, asset-bridge magic or host-pacing
+  marker. All 16 KOV tests and 34 core SDK tests passed.
+- An instruction-clock emulator smoke test launched the fixed-30 336 MHz BDA
+  to the real KOV title, accepted coin/start/direction/action inputs, produced
+  22.05 kHz audio with zero underruns/overruns and stopped cleanly. This is only
+  a functional regression; its frame rate is intentionally not reported as a
+  real-H1 result.
+- `H1-KOV-Plus-performance-v6-2026-08-17.zip` is 348,587 bytes with SHA-256
+  `FD5485321511CC6BBC12B0D3ADF330F4B3013C5EE1A3B36D24446B89AC730DB1`.
+  Its eight staged files and the ZIP container independently passed the release
+  privacy audit with zero findings.
+- Real-device acceptance requires `KOVPERF.TXT` from the same busy battle for
+  adaptive and fixed-30 profiles at 336 and 384 MHz. `logic_fps_x100` measures
+  gameplay speed; `render_fps_x100` measures visual cadence. Phase percentages
+  determine whether the next optimization belongs in A68K, Z80, rendering,
+  audio or LCD submission.
+
+**V7 active-voice ICS2115 mixer candidate (2026-08-17):**
+
+- IDA inspection of the V6 MIPS ELF confirmed that the 22.05 kHz mixer scanned
+  all 32 ICS2115 slots and rebuilt frequency step, volume, sample base and loop
+  boundaries for every active sample. The core is a generated MIPS32R1 A68K
+  interpreter, not a JIT; the C build already uses `-O3`, `-march=mips32`,
+  soft-float, non-PIC code and section garbage collection.
+- V7 gathers active voices once per audio buffer and retains their invariant
+  mixer values in scratch storage owned by the heap-allocated ICS2115 object.
+  Sample callback order, 22.05 kHz output, address progression, completion
+  flags and IRQ behavior are unchanged. The final MIPS mixer stack frame is 80
+  bytes, compared with 72 bytes in V6; an earlier stack-resident draft was
+  rejected because it required about 1 KiB of additional task stack.
+- A two-voice continuous-play regression covers output samples, read counts,
+  address progression and active state. All 16 KOV tests and 34 core SDK tests
+  pass, including the MIPS32R1 cross-compile.
+- A five-voice host microbenchmark performed 36,800,000 reads with the same
+  checksum in both versions. Five interleaved runs measured medians of 293 ms
+  for V6 and 164 ms for V7, a 44% mixer-only reduction on the host. This does
+  not establish the physical-H1 FPS gain.
+- V7 hardware logs identify the implementation as `audio_mixer_version=2`.
+  Acceptance requires a same-scene V6/V7 comparison, preferably fixed-30 at
+  336 MHz first. Emulator smoothness remains functional evidence only.
+- The five reproducible V7 profiles (base, adaptive 336 MHz, fixed-30 336 MHz,
+  adaptive 384 MHz and fixed-30 384 MHz) have respective SHA-256 values
+  `B6B99829E9A63910034A7D34733631A04C1B815D9516AE898FB7763C9A566178`,
+  `370AF5202F553EBF2D6D7B9CC96EC85E576FECAEF93595803471E791A323D5BC`,
+  `A9E49223D1ADD92ECF99BB75321248209501FCF353C6F2F37C9FF5F0631E3789`,
+  `84BC0C065531CC08E81730BC9998A3E2596CA0C8C7308612BD4931C96732BC01`
+  and `9E4B124D3405EC0FB0CC2C4436E807854E6533E4AE292B947FDF9CFF4BA5FF1C`.
+- The exact fixed-30 336 MHz release BDA was transactionally installed as the
+  only `KOV.bda` on an isolated writable NAND. It reached a live battle and
+  accepted coin, start, direction and action input. Host audio stayed at 22.05
+  kHz with zero underruns or overruns. The QEMU process used 64 MiB, single-
+  thread TCG and instruction-clock pacing; no emulator performance increase
+  was used as evidence for the H1.
+- A reset-like stop preserved the complete 49,152-byte journal. Its 30 `LIVE`
+  records had continuous sequence numbers `7..36`, ran from 5,825 through
+  150,987 ms and all reported `audio_mixer_version=2`, phase 8, zero sample or
+  ROM faults, zero failed audio submissions and `log_fail=0`. The final record
+  reported 8,734 logical frames, 4,367 rendered frames and 4,367 skipped
+  frames. The NAND scan contained no bad, invalid or torn FTL records.
+- LCD submissions and journal checkpoints then stopped while QEMU guest
+  instructions and emulated audio continued. This repeats the known long-run
+  emulator-only application stall near the prior 140-143 second boundary; the
+  clean V7 journal gives no evidence that the mixer change caused it.
+- `H1-KOV-Plus-performance-v7-2026-08-17.zip` is 350,410 bytes with SHA-256
+  `8554513F1FC54D291273F1A6D441037A0DD6A7C0057631BFE043D13F1AB75E84`.
+  Its eight staged files and ZIP container independently passed the privacy
+  audit, and 7-Zip verified the archive without errors.
+
 **Final public build (2026-08-01):**
 
 - `H1KOVPlus.bda`: 702,452 bytes, SHA-256

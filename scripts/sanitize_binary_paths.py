@@ -19,12 +19,16 @@ def padded_replacement(length: int, label: str, separator: str) -> str:
     return base + "_" * (length - len(base))
 
 
-def replacement_pairs() -> list[tuple[str, str]]:
+def replacement_pairs(extra_roots: list[str] | None = None) -> list[tuple[str, str]]:
     home = Path.home().resolve()
     roots = [
         (str(REPOSITORY_ROOT), "repo"),
         (str(home), "home"),
     ]
+    roots.extend(
+        (str(Path(root).resolve()), f"build{index}")
+        for index, root in enumerate(extra_roots or [])
+    )
     pairs: list[tuple[str, str]] = []
     for source, label in roots:
         for variant in (source, source.replace("\\", "/")):
@@ -33,7 +37,8 @@ def replacement_pairs() -> list[tuple[str, str]]:
 
     host = os.environ.get("COMPUTERNAME") or socket.gethostname()
     if host:
-        pairs.append((host, "BUILDHOST" + "_" * max(0, len(host) - 9)))
+        replacement = "BUILDHOST"[: len(host)] + "_" * max(0, len(host) - 9)
+        pairs.append((host, replacement))
     return sorted(set(pairs), key=lambda item: len(item[0]), reverse=True)
 
 
@@ -52,10 +57,10 @@ def replace_case_insensitive(data: bytes, old: bytes, new: bytes) -> tuple[bytes
     return bytes(output), count
 
 
-def sanitize(path: Path) -> int:
+def sanitize(path: Path, extra_roots: list[str] | None = None) -> int:
     data = path.read_bytes()
     total = 0
-    for old_text, new_text in replacement_pairs():
+    for old_text, new_text in replacement_pairs(extra_roots):
         for encoding in ("utf-8", "utf-16le"):
             old = old_text.encode(encoding)
             new = new_text.encode(encoding)
@@ -69,12 +74,18 @@ def sanitize(path: Path) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--in-place", action="store_true", required=True)
+    parser.add_argument(
+        "--prefix",
+        action="append",
+        default=[],
+        help="additional source or build root to remove (repeatable)",
+    )
     parser.add_argument("files", nargs="+", type=Path)
     args = parser.parse_args()
     for path in args.files:
         if not path.is_file():
             raise FileNotFoundError(path)
-        print(f"{path}: replacements={sanitize(path)}")
+        print(f"{path}: replacements={sanitize(path, args.prefix)}")
     return 0
 
 

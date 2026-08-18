@@ -22,7 +22,7 @@ DEFAULT_STAGE = DELIVERABLES_ROOT / RELEASE_NAME
 DEFAULT_ARCHIVE = DEFAULT_STAGE.with_suffix(".zip")
 ZIP_TIMESTAMP = (2026, 8, 4, 0, 0, 0)
 SOURCE_DATE_EPOCH = "1785715200"
-EXPECTED_TESTS = 11
+EXPECTED_TESTS = 16
 
 CZ80_FILES = (
     "cz80.c",
@@ -40,7 +40,9 @@ PROHIBITED_SUFFIXES = {".elf", ".log", ".pak", ".pyc", ".pyo", ".zip"}
 PROFILES = (
     "H1KOVPlus-base.bda",
     "H1KOVPlus-336MHz.bda",
+    "H1KOVPlus-336MHz-30FPS.bda",
     "H1KOVPlus-384MHz.bda",
+    "H1KOVPlus-384MHz-30FPS.bda",
 )
 
 
@@ -133,7 +135,9 @@ def write_release_documents(stage: Path) -> None:
         "--------\n"
         "H1KOVPlus-base.bda: no clock change and no live profile journal.\n"
         "H1KOVPlus-336MHz.bda: nominal-clock live profiling and adaptive frameskip.\n"
+        "H1KOVPlus-336MHz-30FPS.bda: nominal clock and fixed alternate-frame rendering.\n"
         "H1KOVPlus-384MHz.bda: experimental overclock profiling and adaptive frameskip.\n"
+        "H1KOVPlus-384MHz-30FPS.bda: 384 MHz and fixed alternate-frame rendering.\n"
         "Do not use 408 MHz: real H1 testing repeatedly rebooted within seconds.\n\n"
         "Runtime data\n"
         "------------\n"

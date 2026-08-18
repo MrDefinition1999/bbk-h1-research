@@ -13,7 +13,7 @@ import struct
 import subprocess
 import sys
 import time
-from dataclasses import asdict
+from dataclasses import asdict, replace
 from pathlib import Path
 
 if __package__:
@@ -195,6 +195,25 @@ def geometry_from_template(logical_zero: bytes) -> FatGeometry:
     )
     geometry.validate()
     return geometry
+
+
+def patch_fat_boot_geometry(logical_zero: bytes, geometry: FatGeometry) -> bytes:
+    patched = bytearray(logical_zero)
+    boot = geometry.boot_lba * geometry.bytes_per_sector
+    struct.pack_into("<H", patched, boot + 11, geometry.bytes_per_sector)
+    patched[boot + 13] = geometry.sectors_per_cluster
+    struct.pack_into("<H", patched, boot + 14, geometry.reserved_sectors)
+    patched[boot + 16] = geometry.fat_copies
+    struct.pack_into("<H", patched, boot + 17, geometry.root_entries)
+    if geometry.total_sectors <= 0xFFFF:
+        struct.pack_into("<H", patched, boot + 19, geometry.total_sectors)
+        struct.pack_into("<I", patched, boot + 32, 0)
+    else:
+        struct.pack_into("<H", patched, boot + 19, 0)
+        struct.pack_into("<I", patched, boot + 32, geometry.total_sectors)
+    struct.pack_into("<H", patched, boot + 22, geometry.sectors_per_fat)
+    struct.pack_into("<I", patched, boot + 28, geometry.hidden_sectors)
+    return bytes(patched)
 
 
 def root_volume_label_from_template(stream, template_result, geometry: FatGeometry) -> bytes:
@@ -549,6 +568,22 @@ def main() -> int:
         help="first physical FTL block (default: 0x3e for H1 V1; H1 V2 uses 0x40)",
     )
     parser.add_argument(
+        "--emulator-expanded",
+        action="store_true",
+        help="allow an emulator-only NAND larger than the 4,096-block production device",
+    )
+    parser.add_argument(
+        "--sectors-per-cluster",
+        type=int,
+        choices=(32, 64),
+        help="override FAT sectors per cluster for an expanded emulator image",
+    )
+    parser.add_argument(
+        "--total-sectors",
+        type=int,
+        help="override FAT total sectors for an expanded emulator image",
+    )
+    parser.add_argument(
         "--map-zero-units-through-used",
         action="store_true",
         help="map every logical unit through the last used FAT extent",
@@ -562,14 +597,22 @@ def main() -> int:
     system_root = args.system_data.resolve()
     template_result = scan_image(template, args.scan_start_block)
     mapping_overrides = apply_mapping_overrides(template_result, args.mapping_override)
-    if template_result.physical_blocks != 4096:
+    if template_result.physical_blocks != 4096 and not args.emulator_expanded:
         raise ValueError(
             f"H1 production template must have 4,096 physical blocks, got {template_result.physical_blocks}"
         )
+    if (args.sectors_per_cluster or args.total_sectors) and not args.emulator_expanded:
+        raise ValueError("FAT geometry overrides require --emulator-expanded")
     with template.open("rb") as stream:
         logical_zero = read_logical_unit(stream, template_result.mapping.get(0))
     template_programmed_pages = programmed_pages_from_template(template_result)
     geometry = geometry_from_template(logical_zero)
+    geometry = replace(
+        geometry,
+        sectors_per_cluster=args.sectors_per_cluster or geometry.sectors_per_cluster,
+        total_sectors=args.total_sectors or geometry.total_sectors,
+    )
+    geometry.validate()
     if args.root_volume_label_entry_hex:
         try:
             root_volume_label = bytes.fromhex(args.root_volume_label_entry_hex)
@@ -584,9 +627,10 @@ def main() -> int:
     else:
         with template.open("rb") as stream:
             root_volume_label = root_volume_label_from_template(
-                stream, template_result, geometry
+                stream, template_result, geometry_from_template(logical_zero)
             )
         root_volume_label_source = "template"
+    logical_zero = patch_fat_boot_geometry(logical_zero, geometry)
     plan = build_plan(
         system_root,
         logical_zero,

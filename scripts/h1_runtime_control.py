@@ -71,7 +71,7 @@ def wait_for_calibration(base_url: str, timeout_seconds: float = 120) -> None:
     deadline = time.monotonic() + timeout_seconds
     while time.monotonic() < deadline:
         current = status(base_url)
-        if current.get("calibration_status") == "complete":
+        if current.get("calibration_status") in {"complete", "not-required"}:
             return
         if not current.get("running"):
             raise SystemExit("emulator stopped while waiting for automatic calibration")

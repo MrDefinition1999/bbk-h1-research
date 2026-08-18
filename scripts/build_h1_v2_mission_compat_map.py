@@ -36,14 +36,14 @@ def read_u32(data: bytes, offset: int) -> int:
 def map_gui_offset(offset: int) -> tuple[str, int | None, str, str]:
     if offset == 0x2B8:
         return "forward", 0x2B0, "function_fingerprint", "confirmed"
-    if offset in (0x6A8, 0x6E0):
-        return "forward", offset, "native_v2_call_sites", "provisional"
+    if offset == 0x6A8:
+        return "shim_game_mode_allow", None, "v1_game_mode_gate_removed", "confirmed"
+    if offset == 0x6E0:
+        return "forward", 0x9E4, "function_semantics_and_call_signature", "confirmed"
     if 0x84C <= offset <= 0x9F4:
         return "forward", offset - 0x114, "table_rebase_and_fingerprint", "confirmed"
-    if offset == 0xAA4:
-        return "shim_game_open", None, "v1_only_game_lifecycle", "dynamic_required"
-    if offset == 0xAA8:
-        return "shim_game_close", None, "v1_only_game_lifecycle", "dynamic_required"
+    if offset in (0xAA4, 0xAA8):
+        return "shim_allow_without_charge", None, "v1_coin_service_removed", "confirmed_policy"
     if offset == 0xAD8:
         return "forward", 0x95C, "function_fingerprint", "confirmed"
     if offset == 0xADC:
@@ -75,7 +75,12 @@ def build_map(
             target = None
             evidence = "v1_five_instruction_noop"
             confidence = "confirmed"
-        elif table in ("FS", "SYS"):
+        elif table == "FS" and offset == 0x048:
+            action = "shim_storage_geometry"
+            target = None
+            evidence = "v1_storage_geometry_abi_and_v2_slot_invalid"
+            confidence = "confirmed"
+        elif table == "SYS":
             action = "forward"
             target = offset
             evidence = "same_slot_native_v2_calls_and_fingerprint"
@@ -144,8 +149,9 @@ def render_markdown(report: dict[str, object]) -> str:
         f"- V2 loader entry: `{report['v2_loader_entry']}`",
         f"- direct V2 forwards: {counts.get('forward', 0)}",
         f"- confirmed return-zero shims: {counts.get('shim_return_zero', 0)}",
-        f"- game lifecycle shims requiring dynamic validation: "
-        f"{counts.get('shim_game_open', 0) + counts.get('shim_game_close', 0)}",
+        f"- storage-geometry shims: {counts.get('shim_storage_geometry', 0)}",
+        f"- game-mode compatibility shims: {counts.get('shim_game_mode_allow', 0)}",
+        f"- no-charge policy shims: {counts.get('shim_allow_without_charge', 0)}",
         "",
         "`RES+0x094` is not forwarded. Its V1 implementation is a five-instruction",
         "leaf that returns zero; the V2 same-offset function has unrelated resource",

@@ -24,6 +24,10 @@ def build_loader(
     output: Path,
     debug_dir: Path | None,
     external_path: str | None,
+    category_override: int | None = None,
+    title_override: str | None = None,
+    description: str = "H1 V2 Mission V2",
+    template_bda: Path | None = None,
 ) -> None:
     original = mission_bda.read_bytes()
     decoded = decode_header(original)
@@ -66,19 +70,28 @@ def build_loader(
         entry_elf = (debug_dir / "mission-entry.elf") if debug_dir else None
         entry = compile_sources([entry_source], [], debug_elf=entry_elf, entry_va=ENTRY_VA)
 
-    resource_offset = int.from_bytes(decoded[0x18:0x1C], "little")
+    template = decode_header(template_bda.read_bytes()) if template_bda else decoded
+    resource_offset = int.from_bytes(template[0x18:0x1C], "little")
+    payload_offset = int.from_bytes(template[0x14:0x18], "little")
     resource_sizes = tuple(
-        int.from_bytes(decoded[offset : offset + 4], "little")
+        int.from_bytes(template[offset : offset + 4], "little")
         for offset in (0x1C, 0x20, 0x24, 0x28)
     )
-    category = int.from_bytes(decoded[0x0C:0x10], "little")
-    title = read_c_string(decoded[0x2C:0x3C]) or "Mission V2"
-    total_size = PAYLOAD_OFFSET + len(entry)
+    category = (
+        int.from_bytes(template[0x0C:0x10], "little")
+        if category_override is None
+        else category_override
+    )
+    title = title_override or read_c_string(template[0x2C:0x3C]) or "Mission V2"
+    template_source = template_bda.read_bytes() if template_bda else original
+    if resource_offset < 0x88 or payload_offset < resource_offset:
+        raise ValueError("template BDA has invalid resource/payload offsets")
+    total_size = payload_offset + len(entry)
     padding = (-total_size) & 3
     fields = HeaderFields(
         category=category,
         file_size_minus_4=total_size + padding - 4,
-        payload_offset=PAYLOAD_OFFSET,
+        payload_offset=payload_offset,
         resource_offset=resource_offset,
         resource_sizes=resource_sizes,
     )
@@ -86,13 +99,18 @@ def build_loader(
         fields,
         title=title,
         build_time="2026-08-05 00:00:00",
-        description="H1 V2 Mission V2",
+        description=description,
     )
-    resources = original[resource_offset:PAYLOAD_OFFSET]
+    resources = template_source[resource_offset:payload_offset]
+    if len(resources) != payload_offset - resource_offset:
+        raise ValueError("template BDA does not contain its complete resource area")
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(header + resources + entry + bytes(padding))
     report = validate_bda(output)
-    if not report["ok"]:
+    template_resource_only_errors = bool(template_bda) and report["errors"] and all(
+        error.startswith("resource ") for error in report["errors"]
+    )
+    if not report["ok"] and not template_resource_only_errors:
         output.unlink(missing_ok=True)
         raise ValueError("built loader failed validation: " + "; ".join(report["errors"]))
     print(f"output={output}")
@@ -112,6 +130,14 @@ def main() -> int:
         "--external-path",
         help="guest path containing the raw Mission payload; omits it from the BDA",
     )
+    parser.add_argument("--category", type=lambda value: int(value, 0))
+    parser.add_argument("--title")
+    parser.add_argument("--description", default="H1 V2 Mission V2")
+    parser.add_argument(
+        "--template-bda",
+        type=Path,
+        help="V2 BDA whose resources, category and payload offset are reused",
+    )
     args = parser.parse_args()
     build_loader(
         args.mission_bda,
@@ -119,6 +145,10 @@ def main() -> int:
         args.output,
         args.debug_dir,
         args.external_path,
+        args.category,
+        args.title,
+        args.description,
+        args.template_bda,
     )
     return 0
 
