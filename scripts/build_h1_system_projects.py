@@ -426,6 +426,7 @@ def materialize(project: Path, version: str) -> None:
     v2_only = {
         "merge_h1_v2_b_volume.py",
         "navigate_h1_v2_mission.py",
+        "sample_h1_mission_cadence.py",
         "patch_h1_v2_mission_resource_drive.py",
         "test_patch_h1_v2_mission_resource_drive.py",
     }

@@ -790,3 +790,39 @@ work/v2-emulator/h1-v2-mission-b.raw
 size:    1,107,296,256 bytes
 SHA-256: 529D02B39AD015B1B846C5F83B20ABF6F45B49590B771ED6C32E6994D46E512C
 ```
+
+## Mission movement cadence A/B
+
+A coordinated 1.X/2.X map-movement comparison on 2026-08-18 kept both H1
+instances at the same 64 MiB, 336 MHz guest clock, single-thread TCG and 17 ms
+LCD refresh settings. It did not enable instruction-clock acceleration, MTTCG,
+extra RAM or any other performance option. The sampler read `/api/status` only;
+it did not capture screenshots, inject input or change emulator state.
+
+After the operator's click was visible in the frame sequence, V1 advanced 260
+changed frames in 13.30 seconds (19.55 changed frames/s). Its one-second guest
+instruction intervals remained between approximately 4.4 and 10.3 million
+instructions/s. The equivalent V2 Mission interval advanced 98 changed frames
+in 14.82 seconds (6.61 changed frames/s). During the visible pauses, one V2
+interval advanced only 3,206 guest instructions in about 1.27 seconds; the next
+several intervals remained in the tens or hundreds of thousands while AIC DMA
+completions continued to advance.
+
+Both instances use the host bridge's same 1,000 ms performance packet. V1 did
+not exhibit the V2 instruction-rate collapse, so that packet and a browser-only
+paint delay are excluded as the cause of this observation. The confirmed fault
+domain is the V1 Mission-on-V2 application/service compatibility path: the
+guest's Mission main path stops doing useful work while emulated audio hardware
+continues. This does not yet identify the individual service. Investigation
+should next trace the V1 `GUI+0x84C..0x9F8` event, wait and drawing calls against
+their relocated V2 implementations; changing CPU/RAM/TCG settings would hide
+rather than diagnose the defect.
+
+`scripts/sample_h1_mission_cadence.py` makes the status-only measurement
+repeatable. Run it separately against ports 8793 and 8796, click a distant map
+point when it prints `CLICK_NOW`, and retain only the small JSON reports:
+
+```powershell
+python scripts/sample_h1_mission_cadence.py --base-url http://127.0.0.1:8793 --output work/mission-cadence-v1.json
+python scripts/sample_h1_mission_cadence.py --base-url http://127.0.0.1:8796 --output work/mission-cadence-v2.json
+```

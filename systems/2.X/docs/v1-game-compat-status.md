@@ -121,3 +121,20 @@ against the cleaned image. Keep the successful external wrapper as the control;
 do not reintroduce the missing-data or embedded-hang probes into the final menu.
 Update the rule table, SDK tests, this status document and all affected public
 repositories after each confirmed correction.
+
+## Movement-cadence diagnosis
+
+The 2026-08-18 same-settings A/B test excludes a simulator-wide or browser-only
+pause. V1 Mission sustained 260 changed frames over 13.30 seconds of detected
+movement (19.55/s), with about 4.4--10.3 million guest instructions/s. V2
+Mission advanced 98 changed frames over 14.82 seconds (6.61/s) and suffered an
+interval with only 3,206 guest instructions over about 1.27 seconds, followed
+by several more depressed intervals. Audio DMA continued throughout. Both runs
+used 64 MiB, the 336 MHz guest clock, single-thread TCG, the 17 ms LCD refresh
+and the same one-second host performance telemetry.
+
+The remaining stutter is therefore in the V1-on-V2 Mission/service compatibility
+path, not a reason to increase emulator performance. The next target is dynamic
+tracing of the relocated V1 game GUI event/wait/drawing services. The reusable
+`scripts/sample_h1_mission_cadence.py` sampler reads status only and records no
+screenshots or local filesystem paths.
