@@ -16,7 +16,7 @@ are:
 | Project | Git commit | Files | Archived tree SHA-256 |
 | --- | --- | ---: | --- |
 | `bbk-h1-1x` | `451d165c40fd9ac1145b4733634450edfd141f39` | 106 | `64FDECD15041A30FCA9B4A164EE3ED17A6A46BE1E1F3C4543943CB7F942206DF` |
-| `bbk-h1-2x` | `dcc18252ce279be276e7c6ae769e8f05d1df6321` | 110 | `037B791BC559656DD58CE91DFFACF0A620278CAB9F7BA70BDB4182EA4D5C7CD5` |
+| `bbk-h1-2x` | `6266944ebe74100f932fd70fdfa627b0bb1f2669` | 110 | `B8C73DBE5E2F2811D301CC1DFC7020CAB7576240EA9DD903A1BBF1ECA7C8AECB` |
 
 GitHub accepted both `main` branch updates after publication. Their exact
 source ZIP archives and the parent research archive passed
