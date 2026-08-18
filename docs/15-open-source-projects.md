@@ -18,7 +18,7 @@ are:
 | `bbk-h1-1x` | `451d165c40fd9ac1145b4733634450edfd141f39` | 106 | `64FDECD15041A30FCA9B4A164EE3ED17A6A46BE1E1F3C4543943CB7F942206DF` |
 | `bbk-h1-2x` | `dcc18252ce279be276e7c6ae769e8f05d1df6321` | 110 | `037B791BC559656DD58CE91DFFACF0A620278CAB9F7BA70BDB4182EA4D5C7CD5` |
 
-Both remote heads were read back from GitHub after publication. Their exact
+GitHub accepted both `main` branch updates after publication. Their exact
 source ZIP archives and the parent research archive passed
 `audit_release_secrets.py` with zero findings before publication. The 1.X
 update contains only the shared bounded-FTL and batched-ECC tooling; native B
