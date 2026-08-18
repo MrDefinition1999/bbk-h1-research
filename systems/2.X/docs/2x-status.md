@@ -760,17 +760,28 @@ the Mission-private `A:\应用\数据\游戏\` prefix and changes only each driv
 letter to B. It rejects an unexpected count and proves that no other byte
 changed. This leaves all V2 system paths and all unrelated BDA paths on A.
 
-`navigate_h1_v2_mission.py` performs a fixed cold-boot sequence without taking
-or matching screenshots. It clears the boot prompts, exits the restored native
-application to its remembered category page with one hardware Return, returns
-to the subject desktop with a second Return, normalizes the remembered
-Tools/Entertainment page, and selects the verified external Mission wrapper.
-On 2026-08-18 the user manually confirmed that this first Mission entry enters
-the game and is playable. A subsequent clean-image cold-boot regression reached
-the Mission character-information page using 71 fixed input events and no
-screenshots in the navigation path. The old `V1Loop` entry reported missing
-data and the embedded experiment hung; both were removed by restoring their
-native V2 BDAs.
+`navigate_h1_v2_mission.py` attaches to an already healthy cold boot by default
+and navigates without taking or matching screenshots; a restart is available
+only through explicit `--reset`. It clears the boot prompts, exits the restored
+native application and category with two hardware Return events, taps inside
+Tools/Entertainment at `(462,251)`, sends Page Up to select its first page, and
+selects the native Time slot at `(153,207)`. That slot loads the verified
+external Mission wrapper because it replaces `中学时间.bda`.
+
+The earlier `(438,251)` category coordinate was on a boundary and the earlier
+`(402,61)` target could launch an unrelated English BDA. After correcting both,
+a live run reached the Mission main menu with advancing guest instructions and
+no QEMU error. The script now reports only `mission-launch-inputs-sent`; final
+screen identity remains an explicit terminal check. On 2026-08-18 the user also
+manually confirmed that this first Mission entry enters the game and is
+playable. The old `V1Loop` entry reported missing data and the embedded
+experiment hung; both were removed by restoring their native V2 BDAs.
+
+One redundant BootROM restart stopped in a repeated exception loop at PC
+`0x81002834` while the retained frame still said `请重新设置时间！`. Input events
+were accepted by the backend but could not be consumed by the guest, proving
+that Return/Confirm mapping was not the cause. A complete frontend/QEMU restart
+restored advancing instructions before navigation continued.
 
 The cleaned private image is:
 

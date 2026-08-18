@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Reset a V2 emulator and navigate to Mission using only fixed input events."""
+"""Navigate a running V2 emulator to Mission using only fixed input events."""
 
 from __future__ import annotations
 
@@ -7,16 +7,16 @@ import argparse
 import json
 import time
 
-from h1_runtime_control import key, request, status, swipe, tap, wait_for_calibration
+from h1_runtime_control import key, request, status, tap, wait_for_calibration
 
 
 KEYBOARD_ENTER = 25
 KEYBOARD_ESCAPE = 24
+KEYBOARD_PAGE_UP = 15
 ACTION_BACK = 41
 MORE_BUTTON = (400, 258)
-TOOLS_CATEGORY = (438, 251)
-MISSION_SLOT = (402, 61)
-PAGE_NORMALIZE_SWIPES = 3
+TOOLS_CATEGORY = (462, 251)
+MISSION_SLOT = (153, 207)
 MIN_BOOT_UPTIME = 15.0
 
 
@@ -41,7 +41,6 @@ def navigate_to_mission(
     base_url: str,
     *,
     reset: bool,
-    page_swipes: int,
     slot_x: int,
     slot_y: int,
     timeout_seconds: float,
@@ -77,25 +76,23 @@ def navigate_to_mission(
     time.sleep(1.2)
     tap(base_url, *TOOLS_CATEGORY, hold_ms=400)
     time.sleep(1.2)
-    # V2 restores the last page used in this category.  Always drive it to the
-    # first page before moving to the custom compatibility page.
-    for _ in range(PAGE_NORMALIZE_SWIPES):
-        swipe(base_url, 60, 150, 420, 150, duration_ms=825, steps=10)
-        time.sleep(0.8)
-    for _ in range(page_swipes):
-        swipe(base_url, 420, 150, 60, 150, duration_ms=825, steps=10)
-        time.sleep(0.8)
+    # Mission reuses the native Time application's slot on the first
+    # Tools/Entertainment page.  Page Up returns a remembered second page to
+    # that first page and is ignored when the first page is already active.
+    key(base_url, KEYBOARD_PAGE_UP)
     time.sleep(1.2)
     tap(base_url, slot_x, slot_y)
     time.sleep(launch_wait_seconds)
 
     result = status(base_url)
     return {
-        "reached": "mission-manual-test-point",
+        "state": "mission-launch-inputs-sent",
         "navigation": "fixed-input-only",
         "screenshots_used": False,
-        "page_swipes": page_swipes,
+        "tools_category": list(TOOLS_CATEGORY),
+        "page_normalization": "keyboard-page-up",
         "slot": [slot_x, slot_y],
+        "reset_requested": reset,
         "pid": result.get("pid"),
         "uptime": result.get("uptime"),
         "input_count": result.get("input_count"),
@@ -105,12 +102,10 @@ def navigate_to_mission(
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--url", default="http://127.0.0.1:8796")
-    parser.add_argument("--no-reset", action="store_true")
     parser.add_argument(
-        "--page-swipes",
-        type=int,
-        default=2,
-        help="left swipes from the first Tools/Entertainment page",
+        "--reset",
+        action="store_true",
+        help="restart QEMU before navigating; normally start the frontend once and omit this",
     )
     parser.add_argument("--slot-x", type=int, default=MISSION_SLOT[0])
     parser.add_argument("--slot-y", type=int, default=MISSION_SLOT[1])
@@ -122,15 +117,12 @@ def main() -> int:
         help="wait for Mission to reach its first manually testable interface",
     )
     args = parser.parse_args()
-    if args.page_swipes < 0:
-        parser.error("--page-swipes must not be negative")
     if args.launch_wait < 0:
         parser.error("--launch-wait must not be negative")
 
     result = navigate_to_mission(
         args.url.rstrip("/"),
-        reset=not args.no_reset,
-        page_swipes=args.page_swipes,
+        reset=args.reset,
         slot_x=args.slot_x,
         slot_y=args.slot_y,
         timeout_seconds=args.timeout,

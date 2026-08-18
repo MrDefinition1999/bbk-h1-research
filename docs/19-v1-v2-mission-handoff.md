@@ -79,6 +79,23 @@ only (`screenshots_used=false`, 71 input events). One terminal screenshot was
 taken only after navigation completed; no screenshot matching controls the
 route.
 
+A later dual-system comparison exposed two false assumptions in that route.
+The old Tools/Entertainment tap at `(438,251)` was on a category boundary, and
+the old `(402,61)` target could launch an unrelated English application.
+Mission actually reuses the native Time slot because the compatibility wrapper
+replaces `中学时间.bda`. The fixed route now taps inside Tools/Entertainment at
+`(462,251)`, sends Page Up to select its first page, and taps Time at
+`(153,207)`. A live run reached the Mission main menu with advancing guest
+instructions and no QEMU error.
+
+The script now attaches to an already healthy cold boot by default; `--reset`
+is explicit. One redundant BootROM restart stopped in a repeated exception loop
+at PC `0x81002834` while still displaying `请重新设置时间！`. The backend accepted
+Return/Confirm input, but the guest could not consume it, so this was not a key
+mapping failure. A complete frontend/QEMU restart recovered normal instruction
+progress. The script reports `mission-launch-inputs-sent`, not an unverified
+claim that the target frame was reached.
+
 The cleaned local image is `work/v2-emulator/h1-v2-mission-b.raw`, 1,107,296,256
 bytes, SHA-256
 `529D02B39AD015B1B846C5F83B20ABF6F45B49590B771ED6C32E6994D46E512C`.
