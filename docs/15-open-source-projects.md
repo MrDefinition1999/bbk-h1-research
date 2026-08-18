@@ -7,6 +7,20 @@ toolchains, IDA state, game data, and generated test artifacts. Those files are
 local inputs only. Public repositories contain reviewable source, documentation,
 input hashes, and pinned component revisions.
 
+## Published baseline
+
+The two version repositories were created as public GitHub projects on
+2026-08-18. Their initial `main` commits and source-only tree identities are:
+
+| Project | Git commit | Files | Generated tree SHA-256 |
+| --- | --- | ---: | --- |
+| `bbk-h1-1x` | `f912a3d821f7bf5b4da35f28efd155414b1caaae` | 106 | `82C77ADB6CD5A915C084847748E10A4ECC6A70ED60D9BBB5CCFD9CB17249BA59` |
+| `bbk-h1-2x` | `29651e8872892defd8c01628d2b0d382c4e568c4` | 106 | `1156B966AB1DC43E8623BD0B17B8AEF7E7EC116182873EEF53D22158F26ECC20` |
+
+Both commits were reconstructed and read back from GitHub with the exact local
+Git commit/tree identities. Their source ZIP archives and the parent research
+archive passed `audit_release_secrets.py` with zero findings before publication.
+
 ## Version repositories
 
 | Repository | Local source | Purpose | Proprietary inputs |

@@ -1,6 +1,6 @@
 # Workspace storage and artifact policy
 
-Last updated: 2026-07-23 (Asia/Irkutsk)
+Last updated: 2026-08-18 (Asia/Irkutsk)
 
 ## 2026-08-18 source-project split cleanup
 
