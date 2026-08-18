@@ -10,16 +10,19 @@ input hashes, and pinned component revisions.
 ## Published baseline
 
 The two version repositories were created as public GitHub projects on
-2026-08-18. Their initial `main` commits and source-only tree identities are:
+2026-08-18. Their current `main` commits and source-only archive tree identities
+are:
 
-| Project | Git commit | Files | Generated tree SHA-256 |
+| Project | Git commit | Files | Archived tree SHA-256 |
 | --- | --- | ---: | --- |
-| `bbk-h1-1x` | `f912a3d821f7bf5b4da35f28efd155414b1caaae` | 106 | `82C77ADB6CD5A915C084847748E10A4ECC6A70ED60D9BBB5CCFD9CB17249BA59` |
-| `bbk-h1-2x` | `29651e8872892defd8c01628d2b0d382c4e568c4` | 106 | `1156B966AB1DC43E8623BD0B17B8AEF7E7EC116182873EEF53D22158F26ECC20` |
+| `bbk-h1-1x` | `451d165c40fd9ac1145b4733634450edfd141f39` | 106 | `64FDECD15041A30FCA9B4A164EE3ED17A6A46BE1E1F3C4543943CB7F942206DF` |
+| `bbk-h1-2x` | `dcc18252ce279be276e7c6ae769e8f05d1df6321` | 110 | `037B791BC559656DD58CE91DFFACF0A620278CAB9F7BA70BDB4182EA4D5C7CD5` |
 
-Both commits were reconstructed and read back from GitHub with the exact local
-Git commit/tree identities. Their source ZIP archives and the parent research
-archive passed `audit_release_secrets.py` with zero findings before publication.
+Both remote heads were read back from GitHub after publication. Their exact
+source ZIP archives and the parent research archive passed
+`audit_release_secrets.py` with zero findings before publication. The 1.X
+update contains only the shared bounded-FTL and batched-ECC tooling; native B
+volume, Mission path and fixed-navigation work remains isolated to 2.X.
 
 ## Version repositories
 
