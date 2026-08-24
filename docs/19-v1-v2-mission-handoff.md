@@ -93,9 +93,14 @@ wrapper's reserved trace arena and requires a fresh `GAME_START` or
 `GAME_RETURN` transition before reporting `mission-wrapper-confirmed`. A
 2026-08-24 cold-boot run reached `GAME_START` with 28 fixed input events. One
 redundant BootROM restart stopped in a repeated exception loop at PC
-`0x81002834` while still displaying `请重新设置时间！`; a complete frontend/QEMU
-restart recovered normal instruction progress. Such starts are discarded
-before navigation or cadence sampling.
+`0x81002834` while still displaying `请重新设置时间！`; EPC was
+`0x8100305C` with Cause ExcCode 10 (reserved instruction), and the mapped
+bytes at both virtual addresses were data rather than code. Backend input
+counters continued to change while the guest instruction counter stopped near
+6.6 million, proving this is not Return/Confirm key mapping. A later fixed reset
+recovered normal instruction progress. `prepare_h1_v2_desktop.py` now rejects
+non-progressing boots, retries at most three resets and verifies progress again
+after desktop normalization.
 
 The original diagnostic marker at virtual `0x83E00B00` overlapped unsafe
 compatibility memory and could make Mission return early with no audio. It was
@@ -128,11 +133,13 @@ It remains private and is not a Git artifact.
 
 ## Next research milestone
 
-Run longer Mission save/load, audio, touch and normal-exit regression sessions
-against the cleaned image. Keep the successful external wrapper as the control;
-do not reintroduce the missing-data or embedded-hang probes into the final menu.
-Update the rule table, SDK tests, this status document and all affected public
-repositories after each confirmed correction.
+Manually test 中国象棋, 俄罗斯, 宠物泡泡, 猫狗大战, 雷霆战机 and 黑白子 from the
+final B-resource image. Record gameplay, audio, save/load and normal exit
+separately for each title. Keep the successful external Mission wrapper as the
+control; do not reintroduce the missing-data or embedded-hang probes. Do not
+resume emulator-stutter work unless the user explicitly changes scope. Update
+the rule table, tests, path document and relevant Git repositories after every
+new verified result.
 
 ## Default-standing cadence regression
 
@@ -154,3 +161,63 @@ wrapper therefore matches V1 cadence closely and the former periodic stall is
 not present. Earlier manually triggered movement samples are not used for this
 conclusion. The sampler defaults to `--mode idle` so an omitted mode cannot
 silently reintroduce the old method.
+
+## Seven-game publishable source release
+
+On 2026-08-24 the proven external compatibility stage was specialized for the
+six remaining V1.41 games: 中国象棋, 俄罗斯, 宠物泡泡, 猫狗大战, 雷霆战机 and
+黑白子. A compiler-free specializer changes only the verified external payload
+path, compiled payload length and aligned cache-flush endpoint inside the
+known-safe Mission wrapper. Each expected instruction sequence must occur
+exactly once, and the unsafe pre-stage-arena template hash is rejected.
+
+The six sources use 106 unique services, all covered by the shared V1-on-V2
+rules (`unmapped=0`). The final installer stores six launcher BDAs and six
+executable payloads on hidden A, but stores all sixteen packaged game resources
+under `B:\应用\数据\游戏`. It changes only verified one-byte A-to-B drive
+letters inside the payloads, with exact expected counts per game. 宠物泡泡's
+runtime save path `B:\应用\数据\游戏\user.bin` is redirected as well.
+
+A and B are written and verified independently in fixed windows
+`[0x40,0x6F4)` and `[0x6F4,0x1000)`. The A phase proves B unchanged; the B
+phase proves the entire boot/A byte range unchanged. Every installed file is
+reopened through FAT and byte-compared. The existing playable Mission and its
+B-resident DataLib files are preserved.
+
+The final private verification image is
+`work/v2-emulator/h1-v2-v1-games-b.raw`, 1,107,296,256 bytes, SHA-256
+`7CDBA2CA81CB3E252752C39F70642FBA8648AB8CBC3F2409B241BF3C1EA0D031`.
+Its A and B region hashes are
+`E37A4C6EAF5A80056C113D6612F003F7918AE8063FE0793A3F8606569BA0E108`
+and
+`E7C1275FD4BFAF705C2539BFB0606C755474A7B77D5BA0CA43F4E3652AF0A56A`.
+A gained two mapped logical units and retains 4,737 free clusters; B gained
+167 and retains 23,602. Full guest paths and checked payload offsets are in
+`docs/20-v2-game-release.md`.
+
+The publishable package contains source, tools, tests and documentation only.
+It excludes firmware, NAND, original BDA/game/AVI content, generated binaries
+and IDA files. Mission is user-verified playable. The other six have static ABI
+and byte-level install verification but still require manual gameplay, audio,
+save and normal-exit testing; no unverified runtime claim is made.
+
+## Flying Video emulator finding
+
+The stock V1.41 `飞天影音` directory contains exactly two AVI files. The
+reproducible installer copied them to `B:\飞天影音`, the volume visible to V2
+Resource Manager. Fixed navigation opens Flying Video's first lower menu
+button, waits for recursive B search, ticks the first result's checkbox and
+uses the inner Open point; row highlighting alone does not select a file.
+
+The user verified both recurring playback pauses and a guest freeze after an
+AVI reaches its natural end. The same intermittent symptom had been observed
+during Mission movement, so it is classified as an emulator/runtime fault, not
+a game-port fault. A native ARM64 QEMU build did not fix it. At the last AVI
+frame, diagnostics showed FIFO depth 30 and DMA complete/rearm 1233/1232. An
+isolated older AIC boundary-drain build generated 894 underruns in about 17
+seconds and later stalled, so it was rejected and all maintained sources were
+restored to the stable baseline.
+
+The user explicitly stopped emulator-stutter work. AVI artifacts are not part
+of the game release, and the obsolete combined AVI/test image must not be used
+as a release base. Continue any AIC/cadence investigation separately.

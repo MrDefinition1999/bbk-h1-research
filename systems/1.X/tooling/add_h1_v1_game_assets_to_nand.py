@@ -48,9 +48,15 @@ def sha256(data: bytes) -> str:
 class LogicalVolume:
     """Read/write logical FTL units, allocating free slots when needed."""
 
-    def __init__(self, image: Path, scan_start_block: int, writable: bool) -> None:
+    def __init__(
+        self,
+        image: Path,
+        scan_start_block: int,
+        writable: bool,
+        scan_end_block: int | None = None,
+    ) -> None:
         self.image = image
-        self.result = scan_image(image, scan_start_block)
+        self.result = scan_image(image, scan_start_block, scan_end_block)
         self.stream = image.open("r+b" if writable else "rb", buffering=0)
         self.cache: dict[int, bytearray] = {}
         self.records = dict(self.result.mapping)
@@ -294,15 +300,16 @@ class FatTree:
             start = index * self.cluster_size
             self.volume.write(self.cluster_offset(cluster), padded[start : start + self.cluster_size])
 
-    def find_free_slots(self, first_cluster: int, count: int) -> int:
+    def find_free_slots(self, first_cluster: int | None, count: int) -> int:
         for base in self.directory_offsets(first_cluster):
             data = self.volume.read(base, self.cluster_size)
             for within in range(0, self.cluster_size - count * 32 + 1, 32):
                 if all(data[within + n * 32] in (0x00, 0xE5) for n in range(count)):
                     return base + within
-        raise RuntimeError(f"directory cluster {first_cluster} has no {count}-entry free run")
+        label = "root" if first_cluster is None else f"cluster {first_cluster}"
+        raise RuntimeError(f"directory {label} has no {count}-entry free run")
 
-    def put_entries(self, first_cluster: int, entries: list[bytes]) -> None:
+    def put_entries(self, first_cluster: int | None, entries: list[bytes]) -> None:
         offset = self.find_free_slots(first_cluster, len(entries))
         self.volume.write(offset, b"".join(entries))
 

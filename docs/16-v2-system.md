@@ -828,3 +828,118 @@ conclusion. `sample_h1_mission_cadence.py` defaults to `--mode idle`:
 python scripts/sample_h1_mission_cadence.py --base-url http://127.0.0.1:8793 --duration 30 --mode idle --output work/mission-idle-v1.json
 python scripts/sample_h1_mission_cadence.py --base-url http://127.0.0.1:8796 --duration 30 --mode idle --output work/mission-idle-v2.json
 ```
+
+## Other V1 games: reusable suite image
+
+The Mission result now generalizes without six unrelated binary rewrites.
+`install_h1_v2_v1_game_suite.py` reads the other six V1.41 games and their
+resources directly from a lawful V1 NAND, verifies complete service coverage,
+and creates a copied V2 image. It retains each game's original icon, title,
+resource envelope and payload. The already verified safe external wrapper is
+specialized by replacing exactly one external path, one compiled payload-size
+instruction pair and one aligned cache-end pair; its safe-template SHA-256 is
+fixed to
+`154B601539E1B865A08D658B2C2038093C5BCA4E1C34935183977B5008E93C2C`.
+
+| Game | Payload bytes | Resource files | Wrapper SHA-256 |
+| --- | ---: | ---: | --- |
+| 中国象棋 | 77,284 | 2 | `DC261A353FC9527D4DA30C8A59B571E65EA00CBB2BF8DE522022CFF2729CCAFD` |
+| 俄罗斯 | 21,876 | 2 | `B0911EE34472B3CD36141ECE2E655C6AD8B71EE92C28D6DFA5B1977F2B77B58D` |
+| 宠物泡泡 | 97,108 | 2 | `461361F516A679E84450843C7F5AC98D081CDCF375AC2CCE2016DA1AB5E80743` |
+| 猫狗大战 | 57,940 | 2 | `3729DDA11B573020E593965E06FF4B5DA930A425FFE37D1E46C25303488E6EEF` |
+| 雷霆战机 | 117,700 | 6 | `1BCA8276DFE2CAA6E41E3ACECE195D08D7E46DED5C9F537F4045F1E4FEA6351B` |
+| 黑白子 | 41,796 | 2 | `CB8575D73F3C03FB75D52C7E5ABA21F6039A48CF9E0004A0DB3822647816A48F` |
+
+Static coverage contains 106 unique services and zero unmapped calls. The
+release installer now uses both native V2 partitions. A holds only the six
+launchers and six external executable payloads. All sixteen packaged game
+resources are stored under `B:\应用\数据\游戏`. Each verified absolute
+`A:\应用\数据\游戏\` string in the external payloads is changed at the
+drive byte only; exact per-game occurrence counts, unchanged payload sizes and
+the absence of a residual A game-data root are required.
+
+The two write phases are isolated: A uses `[0x40,0x6F4)` and proves B
+unchanged; B uses `[0x6F4,0x1000)` and proves the complete boot/A range
+unchanged. Every launcher, executable payload and resource is reopened through
+its target FAT volume and byte-compared. The private verification image is
+`work/v2-emulator/h1-v2-v1-games-b.raw`, 1,107,296,256 bytes, SHA-256
+`7CDBA2CA81CB3E252752C39F70642FBA8648AB8CBC3F2409B241BF3C1EA0D031`.
+Its A/B region hashes are respectively
+`E37A4C6EAF5A80056C113D6612F003F7918AE8063FE0793A3F8606569BA0E108`
+and
+`E7C1275FD4BFAF705C2539BFB0606C755474A7B77D5BA0CA43F4E3652AF0A56A`.
+A retains 4,737 free FAT clusters and B retains 23,602.
+
+The complete per-game guest paths and checked payload offsets are recorded in
+`docs/20-v2-game-release.md`. Mission remains at the native Time filesystem
+slot `A:\应用\程序\中学时间.bda`, despite displaying the Mission title.
+
+A healthy real-settings cold boot reached Tools/Entertainment through the
+fixed, non-visual preparation script. The six new games are now ready for
+manual testing in the emulator. Until those tests report results, their
+gameplay, audio, normal exit and save behavior are classified as unverified.
+
+## V1 Flying Video samples on V2
+
+The V1.41 root directory `飞天影音` contains exactly two AVI files:
+
+| File | Bytes | SHA-256 |
+| --- | ---: | --- |
+| `@ibox学习机广告.avi` | 8,496,944 | `0F74E1E937F1E640B14BC1D87BC2D290DA9A386B94D85818C98935E23A697BDF` |
+| `拜见罗宾逊一家(meet the robinsons).avi` | 14,987,940 | `9556748647CBBE90B6E118750D3E60ADDDED78EB534FD53925105B6B69048A2E` |
+
+`install_h1_v2_flying_video_samples.py` copies those two files without
+transcoding into `B:\飞天影音` on a copied V2 image. B is the volume exposed by
+the V2 Resource Manager, while A is hidden there. The tool retains the native
+V2 `飞天影音.bda`, bounds FTL writes to the V2 B window `[0x6F4,0x1000)`,
+compares every FAT readback byte and verifies that the complete boot/A byte
+range remains unchanged. The former combined diagnostic image contained
+23,484,884 original AVI bytes and was used only to reproduce the emulator
+fault. It was based on the superseded A-resource game-suite image and is not a
+release artifact. A future video test must be rebuilt on the final
+`h1-v2-v1-games-b.raw` base; AVI samples are not game-release inputs.
+
+The earlier A-volume test image was rejected before playback because Resource
+Manager hides A; it is not a valid test artifact. The corrected B-volume image
+booted with 64 MiB, single-thread TCG and `instruction_clock=false`. The user
+then confirmed that playback repeatedly pauses at intervals and that the guest
+freezes after an AVI reaches its natural end. This reproduces the same symptom
+previously noticed during Mission movement and establishes an emulator/runtime
+problem rather than a Mission-port-specific regression.
+
+`navigate_h1_v2_flying_video.py` fixes the complete input route without
+screenshot matching: normalize the desktop, enter Tools/Entertainment, open
+Flying Video, tap its first lower menu button at `(30,250)`, wait for the
+recursive B search, tick the first result's checkbox at `(22,105)`, then tap
+the reliable inner Open point `(450,250)`. Merely highlighting the row is not
+enough, and the edge point `(455,258)` can be dropped.
+
+## Emulator issues deliberately left open
+
+The playback/cadence repair was stopped at the user's request; the following
+evidence is retained so a later AI does not repeat the experiments.
+
+- The native Windows ARM64 QEMU runtime was built and tested with the same real
+  H1 settings: 64 MiB, single-thread TCG and
+  `instruction_clock=false`. It did not fix either periodic AVI pauses or the
+  natural-end freeze.
+- At the final AVI frame (01:00), diagnostics reported audio FIFO depth 30 and
+  DMA complete/rearm counts 1233/1232. The guest did not recover after the file
+  ended.
+- An isolated build restoring the older AIC boundary-drain behavior produced
+  894 underruns in roughly 17 seconds, then the guest stalled/entered reserved
+  instruction handling. That change was rejected; the maintained source and
+  runtime were restored to the stable baseline.
+- A failed BootROM start can retain the `请重新设置时间！` frame while the CPU
+  loops at PC `0x81002834` with EPC `0x8100305C` and Cause ExcCode 10
+  (reserved instruction). The bytes mapped at those virtual addresses are data,
+  not code, and the guest instruction counter stops near 6.6 million. Backend
+  key events still increment, so this is not an input mapping failure.
+- `prepare_h1_v2_desktop.py` now compares instruction progress before
+  navigation and performs at most three fixed resets. It also checks progress
+  after desktop normalization. A non-progressing boot is discarded rather than
+  diagnosed by repeated screenshots.
+
+No emulator/QEMU process is required for packaging. Cadence, AIC and AVI
+natural-end work should remain a separate future investigation from the
+V1-on-V2 game release.

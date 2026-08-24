@@ -131,6 +131,11 @@ def main() -> None:
         help="label the sample; only the reproducible default-standing method is accepted",
     )
     parser.add_argument("--output", type=Path)
+    parser.add_argument(
+        "--raw-output",
+        type=Path,
+        help="optionally preserve every status sample for stall diagnosis",
+    )
     args = parser.parse_args()
     if args.duration <= 0 or not 20 <= args.interval_ms <= 1000 or args.countdown < 0:
         parser.error(
@@ -168,17 +173,36 @@ def main() -> None:
             rows.append(
                 {
                     "time_ms": round((time.monotonic() - started) * 1000.0, 3),
-                    "frame_sequence": int(status["frame"]["sequence"]),
-                    "frame_age": float(status["frame"]["age"]),
+                    # A stream can legitimately be absent while applications
+                    # switch, so the frontend reports null for its sequence or
+                    # age until the next packet arrives.  Keep those transition
+                    # samples instead of treating them as sampler failures.
+                    "frame_sequence": int(status["frame"]["sequence"] or 0),
+                    "frame_age": float(status["frame"]["age"] or 0.0),
                     "guest_instructions": int(
-                        status["performance"]["guest_instructions"]
+                        status["performance"]["guest_instructions"] or 0
                     ),
                     "qemu_realtime_ms": int(
-                        status["performance"]["qemu_realtime_ms"]
+                        status["performance"]["qemu_realtime_ms"] or 0
                     ),
-                    "audio_sequence": int(status["audio"]["sequence"]),
+                    "audio_sequence": int(status["audio"]["sequence"] or 0),
                     "dma_completions": int(
-                        status["audio"]["diagnostics"]["dma_completions"]
+                        status["audio"]["diagnostics"]["dma_completions"] or 0
+                    ),
+                    "audio_output_frames": int(
+                        status["audio"]["diagnostics"]["output_frames"] or 0
+                    ),
+                    "audio_tx_dma_samples": int(
+                        status["audio"]["diagnostics"]["tx_dma_samples"] or 0
+                    ),
+                    "audio_tx_fifo_level": int(
+                        status["audio"]["diagnostics"]["tx_fifo_level"] or 0
+                    ),
+                    "audio_flags": int(
+                        status["audio"]["diagnostics"]["flags"] or 0
+                    ),
+                    "audio_max_rearm_gap_ns": int(
+                        status["audio"]["diagnostics"]["max_rearm_gap_ns"] or 0
                     ),
                 }
             )
@@ -202,6 +226,24 @@ def main() -> None:
     if args.output:
         args.output.parent.mkdir(parents=True, exist_ok=True)
         args.output.write_text(rendered, encoding="utf-8")
+    if args.raw_output:
+        args.raw_output.parent.mkdir(parents=True, exist_ok=True)
+        args.raw_output.write_text(
+            json.dumps(
+                {
+                    "format": "h1-runtime-cadence-samples-v1",
+                    "base_url": args.base_url.rstrip("/"),
+                    "configuration": configuration,
+                    "sample_interval_ms": args.interval_ms,
+                    "sample_failures": failures,
+                    "rows": rows,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
     print(rendered, end="")
 
 

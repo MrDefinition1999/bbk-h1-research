@@ -56,6 +56,34 @@
       "sha256": "8283D51E341B3552FC4EC9BDBBD57640AA4D01C86B46C616F587FFD709A59151",
       "required": false,
       "kind": "derived"
+    },
+    {
+      "path": ".local/inputs/h1-v1-system.raw",
+      "bytes": 1107296256,
+      "sha256": "614B0E5F85CA262A84BF26C7AD024043B32CE4CC6756D1C741E006846E134012",
+      "required": false,
+      "kind": "lawful-local-v1-input"
+    },
+    {
+      "path": ".local/derived/mission-stage-arena.bda",
+      "bytes": 32676,
+      "sha256": "154B601539E1B865A08D658B2C2038093C5BCA4E1C34935183977B5008E93C2C",
+      "required": false,
+      "kind": "derived"
+    },
+    {
+      "path": ".local/derived/h1-v2-mission-b.raw",
+      "bytes": 1107296256,
+      "sha256": "535D373C6DAEC12654C7611B81064AC2C64E1F742C9B4BFF0C6E67BC39A89C8F",
+      "required": false,
+      "kind": "derived"
+    },
+    {
+      "path": ".local/build/h1-v2-v1-games-b.raw",
+      "bytes": 1107296256,
+      "sha256": "7CDBA2CA81CB3E252752C39F70642FBA8648AB8CBC3F2409B241BF3C1EA0D031",
+      "required": false,
+      "kind": "derived"
     }
   ]
 }

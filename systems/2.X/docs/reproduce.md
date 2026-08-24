@@ -37,7 +37,33 @@ python tooling/build_h1_v2_nand.py `
   --manifest .local/build/h1-v2-system.json
 ```
 
-6. Validate direct-OS and complete BootROM boot with the pinned emulator at 64 MiB, single-threaded TCG, and the V2 touch profile.
-7. Run `python scripts/verify_source_project.py`, build a Git archive, and run `python tooling/audit_release_secrets.py <archive>` before publishing source changes.
+6. Reproduce the checked Mission compatibility base described in
+   `docs/v1-game-compat-status.md`. Keep it and the verified stage-arena
+   wrapper under ignored `.local/derived/`. Then build the final seven-game
+   image from that base and your lawful V1 NAND:
+
+```powershell
+python tooling/install_h1_v2_v1_game_suite.py `
+  --template .local/derived/h1-v2-mission-b.raw `
+  --v1-image .local/inputs/h1-v1-system.raw `
+  --wrapper-template .local/derived/mission-stage-arena.bda `
+  --output .local/build/h1-v2-v1-games-b.raw `
+  --manifest .local/build/h1-v2-v1-games-b.json `
+  --python-ecc
+```
+
+   The installer bounds A to `[0x40,0x6F4)`, B to
+   `[0x6F4,0x1000)`, writes all game resources to B, and byte-verifies every
+   output file. Exact guest paths and expected private-build hashes are in
+   `docs/game-release.md`.
+
+7. Run `python -m unittest tooling/test_install_h1_v2_v1_game_suite.py -v`.
+   Validate direct-OS and complete BootROM boot with the pinned emulator at
+   64 MiB, single-threaded TCG, `instruction_clock=false`, and the V2 touch
+   profile. Mission is already user-verified playable; treat the other six
+   games as pending until each gameplay/audio/save/exit test is recorded.
+8. Run `python scripts/verify_source_project.py`, build a Git archive from
+   tracked files, and run `python tooling/audit_release_secrets.py <archive>`
+   on the archive itself before publishing source changes.
 
 V1 game compatibility is an application-level ABI layer; it does not authorize distribution of original V1 games or Mission data.

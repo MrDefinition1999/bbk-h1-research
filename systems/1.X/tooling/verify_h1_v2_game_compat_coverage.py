@@ -11,7 +11,11 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-SCANNER_DIR = ROOT / "h1-bda-sdk" / "reverse" / "tools"
+SDK_ROOT = next(
+    (path for path in (ROOT / "h1-bda-sdk", ROOT / "sdk") if path.is_dir()),
+    ROOT / "h1-bda-sdk",
+)
+SCANNER_DIR = SDK_ROOT / "reverse" / "tools"
 if str(SCANNER_DIR) not in sys.path:
     sys.path.insert(0, str(SCANNER_DIR))
 

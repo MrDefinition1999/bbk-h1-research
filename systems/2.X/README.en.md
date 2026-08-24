@@ -8,7 +8,7 @@ python .\scripts\verify_inputs.py
 python .\scripts\verify_source_project.py
 ```
 
-Place your lawful V2.20 PC and SD recovery packages in `.local/inputs/`. See [reproduction](docs/reproduce.md), [2.X status](docs/2x-status.md), and [V1 game compatibility status](docs/v1-game-compat-status.md).
+Place your lawful V2.20 PC and SD recovery packages in `.local/inputs/`. See [reproduction](docs/reproduce.md), [complete seven-game paths and release verification](docs/game-release.md), [2.X status](docs/2x-status.md), and [V1 game compatibility status](docs/v1-game-compat-status.md). The final layout keeps only launchers/executable payloads on hidden A; all game resources are on Resource Manager-visible B.
 
 Original project code and documentation use Apache-2.0; the fetched emulator retains GPL/QEMU upstream terms.
 

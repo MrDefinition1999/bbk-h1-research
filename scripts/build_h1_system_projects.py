@@ -173,7 +173,10 @@ def main() -> int:
     required = {
         "README.md", "README.en.md", "LICENSE", "NOTICE",
         "components.lock.json", "inputs.lock.json", "docs/reproduce.md",
+        "docs/game-release.md",
         "scripts/bootstrap_components.py", "scripts/verify_inputs.py",
+        "tooling/install_h1_v2_v1_game_suite.py",
+        "tooling/test_install_h1_v2_v1_game_suite.py",
         "tooling/audit_release_secrets.py",
     }
     present = {path.relative_to(ROOT).as_posix() for path in files()}
@@ -251,7 +254,7 @@ python .\\scripts\\verify_inputs.py
 python .\\scripts\\verify_source_project.py
 ```
 
-把自己合法取得的 V2.20 PC/SD 恢复包放到 `.local/inputs/`。完整步骤见 [复现说明](docs/reproduce.md)，持续研究状态见 [2.X 状态](docs/2x-status.md) 和 [V1 游戏兼容状态](docs/v1-game-compat-status.md)。
+把自己合法取得的 V2.20 PC/SD 恢复包放到 `.local/inputs/`。完整步骤见 [复现说明](docs/reproduce.md)，七个游戏的完整 A/B 路径见 [游戏兼容发布](docs/game-release.md)，持续研究状态见 [2.X 状态](docs/2x-status.md) 和 [V1 游戏兼容状态](docs/v1-game-compat-status.md)。最终布局只在隐藏 A 保留启动 BDA 和执行体，全部游戏资源位于资源管理器可见的 B。
 
 公开代码和文档采用 Apache-2.0；拉取的模拟器组件保留 GPL/QEMU 上游许可。
 
@@ -268,7 +271,7 @@ python .\\scripts\\verify_inputs.py
 python .\\scripts\\verify_source_project.py
 ```
 
-Place your lawful V2.20 PC and SD recovery packages in `.local/inputs/`. See [reproduction](docs/reproduce.md), [2.X status](docs/2x-status.md), and [V1 game compatibility status](docs/v1-game-compat-status.md).
+Place your lawful V2.20 PC and SD recovery packages in `.local/inputs/`. See [reproduction](docs/reproduce.md), [complete seven-game paths and release verification](docs/game-release.md), [2.X status](docs/2x-status.md), and [V1 game compatibility status](docs/v1-game-compat-status.md). The final layout keeps only launchers/executable payloads on hidden A; all game resources are on Resource Manager-visible B.
 
 Original project code and documentation use Apache-2.0; the fetched emulator retains GPL/QEMU upstream terms.
 
@@ -345,8 +348,34 @@ python tooling/build_h1_v2_nand.py `
   --manifest .local/build/h1-v2-system.json
 ```
 
-6. Validate direct-OS and complete BootROM boot with the pinned emulator at 64 MiB, single-threaded TCG, and the V2 touch profile.
-7. Run `python scripts/verify_source_project.py`, build a Git archive, and run `python tooling/audit_release_secrets.py <archive>` before publishing source changes.
+6. Reproduce the checked Mission compatibility base described in
+   `docs/v1-game-compat-status.md`. Keep it and the verified stage-arena
+   wrapper under ignored `.local/derived/`. Then build the final seven-game
+   image from that base and your lawful V1 NAND:
+
+```powershell
+python tooling/install_h1_v2_v1_game_suite.py `
+  --template .local/derived/h1-v2-mission-b.raw `
+  --v1-image .local/inputs/h1-v1-system.raw `
+  --wrapper-template .local/derived/mission-stage-arena.bda `
+  --output .local/build/h1-v2-v1-games-b.raw `
+  --manifest .local/build/h1-v2-v1-games-b.json `
+  --python-ecc
+```
+
+   The installer bounds A to `[0x40,0x6F4)`, B to
+   `[0x6F4,0x1000)`, writes all game resources to B, and byte-verifies every
+   output file. Exact guest paths and expected private-build hashes are in
+   `docs/game-release.md`.
+
+7. Run `python -m unittest tooling/test_install_h1_v2_v1_game_suite.py -v`.
+   Validate direct-OS and complete BootROM boot with the pinned emulator at
+   64 MiB, single-threaded TCG, `instruction_clock=false`, and the V2 touch
+   profile. Mission is already user-verified playable; treat the other six
+   games as pending until each gameplay/audio/save/exit test is recorded.
+8. Run `python scripts/verify_source_project.py`, build a Git archive from
+   tracked files, and run `python tooling/audit_release_secrets.py <archive>`
+   on the archive itself before publishing source changes.
 
 V1 game compatibility is an application-level ABI layer; it does not authorize distribution of original V1 games or Mission data.
 """
@@ -395,6 +424,10 @@ V2_INPUTS = {
         {"path": ".local/derived/v2-extos1.bin", "bytes": 3676424, "sha256": "BE6313C6C634E00331C463DFC12C92DEDFD43BCF173A58EF5CA4BDB062B62767", "required": False, "kind": "derived"},
         {"path": ".local/derived/v2-extos2.bin", "bytes": 1150608, "sha256": "339BE4FEB60565EA475C17A2EA668C0FBC58ADE9E83380ADF6A25028EDABC57C", "required": False, "kind": "derived"},
         {"path": ".local/derived/h1-v2-system.raw", "bytes": 1107296256, "sha256": "8283D51E341B3552FC4EC9BDBBD57640AA4D01C86B46C616F587FFD709A59151", "required": False, "kind": "derived"},
+        {"path": ".local/inputs/h1-v1-system.raw", "bytes": 1107296256, "sha256": "614B0E5F85CA262A84BF26C7AD024043B32CE4CC6756D1C741E006846E134012", "required": False, "kind": "lawful-local-v1-input"},
+        {"path": ".local/derived/mission-stage-arena.bda", "bytes": 32676, "sha256": "154B601539E1B865A08D658B2C2038093C5BCA4E1C34935183977B5008E93C2C", "required": False, "kind": "derived"},
+        {"path": ".local/derived/h1-v2-mission-b.raw", "bytes": 1107296256, "sha256": "535D373C6DAEC12654C7611B81064AC2C64E1F742C9B4BFF0C6E67BC39A89C8F", "required": False, "kind": "derived"},
+        {"path": ".local/build/h1-v2-v1-games-b.raw", "bytes": 1107296256, "sha256": "7CDBA2CA81CB3E252752C39F70642FBA8648AB8CBC3F2409B241BF3C1EA0D031", "required": False, "kind": "derived"},
     ],
 }
 
@@ -428,6 +461,12 @@ def materialize(project: Path, version: str) -> None:
         "navigate_h1_v2_mission.py",
         "test_navigate_h1_v2_mission.py",
         "sample_h1_mission_cadence.py",
+        "install_h1_v2_v1_game_suite.py",
+        "install_h1_v2_flying_video_samples.py",
+        "test_install_h1_v2_v1_game_suite.py",
+        "prepare_h1_v2_v1_game_suite_test.py",
+        "prepare_h1_v2_desktop.py",
+        "navigate_h1_v2_flying_video.py",
         "patch_h1_v2_mission_trace_location.py",
         "test_patch_h1_v2_mission_trace_location.py",
         "patch_h1_v2_mission_resource_drive.py",
@@ -456,6 +495,7 @@ def materialize(project: Path, version: str) -> None:
         write_text(project / "docs" / "reproduce.md", V2_REPRODUCE)
         copy_text(ROOT / "docs" / "16-v2-system.md", project / "docs" / "2x-status.md")
         copy_text(ROOT / "docs" / "19-v1-v2-mission-handoff.md", project / "docs" / "v1-game-compat-status.md")
+        copy_text(ROOT / "docs" / "20-v2-game-release.md", project / "docs" / "game-release.md")
 
 
 def tree_digest(root: Path) -> str:

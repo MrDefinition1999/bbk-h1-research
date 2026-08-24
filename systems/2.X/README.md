@@ -8,7 +8,7 @@ python .\scripts\verify_inputs.py
 python .\scripts\verify_source_project.py
 ```
 
-把自己合法取得的 V2.20 PC/SD 恢复包放到 `.local/inputs/`。完整步骤见 [复现说明](docs/reproduce.md)，持续研究状态见 [2.X 状态](docs/2x-status.md) 和 [V1 游戏兼容状态](docs/v1-game-compat-status.md)。
+把自己合法取得的 V2.20 PC/SD 恢复包放到 `.local/inputs/`。完整步骤见 [复现说明](docs/reproduce.md)，七个游戏的完整 A/B 路径见 [游戏兼容发布](docs/game-release.md)，持续研究状态见 [2.X 状态](docs/2x-status.md) 和 [V1 游戏兼容状态](docs/v1-game-compat-status.md)。最终布局只在隐藏 A 保留启动 BDA 和执行体，全部游戏资源位于资源管理器可见的 B。
 
 公开代码和文档采用 Apache-2.0；拉取的模拟器组件保留 GPL/QEMU 上游许可。
 

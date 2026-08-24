@@ -29,7 +29,10 @@ def main() -> int:
     required = {
         "README.md", "README.en.md", "LICENSE", "NOTICE",
         "components.lock.json", "inputs.lock.json", "docs/reproduce.md",
+        "docs/game-release.md",
         "scripts/bootstrap_components.py", "scripts/verify_inputs.py",
+        "tooling/install_h1_v2_v1_game_suite.py",
+        "tooling/test_install_h1_v2_v1_game_suite.py",
         "tooling/audit_release_secrets.py",
     }
     present = {path.relative_to(ROOT).as_posix() for path in files()}

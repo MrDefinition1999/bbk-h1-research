@@ -3,6 +3,8 @@ param(
   [string]$MsysRoot = "work\rebuild\tools\msys2-20260611\msys64",
   [string]$OutputBin = "emulator\windows-x86_64\bin",
   [string]$PythonExe = "work\rebuild\venv\Scripts\python.exe",
+  [ValidateSet("x86_64", "arm64")]
+  [string]$Architecture = "x86_64",
   [switch]$PruneStale
 )
 
@@ -25,7 +27,7 @@ function Resolve-RepositoryPath([string]$Path, [bool]$MustExist = $true) {
   return $full
 }
 
-function Assert-X64Pe([string]$Path) {
+function Assert-TargetPe([string]$Path) {
   $stream = [System.IO.File]::OpenRead($Path)
   try {
     $reader = [System.IO.BinaryReader]::new($stream)
@@ -42,8 +44,9 @@ function Assert-X64Pe([string]$Path) {
       throw "not a PE file (missing PE signature): $Path"
     }
     $machine = $reader.ReadUInt16()
-    if ($machine -ne 0x8664) {
-      throw ("expected x86-64 PE machine 0x8664, found 0x{0:X4}: {1}" -f $machine, $Path)
+    $expectedMachine = if ($Architecture -eq "arm64") { 0xAA64 } else { 0x8664 }
+    if ($machine -ne $expectedMachine) {
+      throw ("expected {0} PE machine 0x{1:X4}, found 0x{2:X4}: {3}" -f $Architecture, $expectedMachine, $machine, $Path)
     }
   } finally {
     $stream.Dispose()
@@ -87,9 +90,12 @@ $qemuPath = Resolve-RepositoryPath $QemuExe
 $msysPath = Resolve-RepositoryPath $MsysRoot
 $outputPath = Resolve-RepositoryPath $OutputBin $false
 $pythonPath = Resolve-RepositoryPath $PythonExe
-$ucrtBin = Join-Path $msysPath "ucrt64\bin"
-$objdump = Join-Path $ucrtBin "objdump.exe"
-$strip = Join-Path $ucrtBin "strip.exe"
+$toolchainPrefix = if ($Architecture -eq "arm64") { "clangarm64" } else { "ucrt64" }
+$toolchainBin = Join-Path $msysPath "$toolchainPrefix\bin"
+$objdumpName = if ($Architecture -eq "arm64") { "llvm-objdump.exe" } else { "objdump.exe" }
+$stripName = if ($Architecture -eq "arm64") { "llvm-strip.exe" } else { "strip.exe" }
+$objdump = Join-Path $toolchainBin $objdumpName
+$strip = Join-Path $toolchainBin $stripName
 $sanitizer = Join-Path $repoRoot "scripts\sanitize_binary_paths.py"
 $auditor = Join-Path $repoRoot "scripts\audit_release_secrets.py"
 
@@ -98,7 +104,7 @@ foreach ($required in @($objdump, $strip, $sanitizer, $auditor)) {
     throw "required tool not found: $required"
   }
 }
-Assert-X64Pe $qemuPath
+Assert-TargetPe $qemuPath
 
 $staging = Join-Path $repoRoot "work\rebuild\tmp\qemu-runtime-x64-$PID"
 $staging = Resolve-RepositoryPath $staging $false
@@ -120,7 +126,7 @@ try {
   } finally {
     $env:SOURCE_DATE_EPOCH = $previousSourceDateEpoch
   }
-  Assert-X64Pe $stagedQemu
+  Assert-TargetPe $stagedQemu
 
   $pending = [System.Collections.Generic.Queue[string]]::new()
   $pending.Enqueue($stagedQemu)
@@ -137,12 +143,12 @@ try {
       if ($visited.ContainsKey($dllKey)) {
         continue
       }
-      $source = Join-Path $ucrtBin $dll
+      $source = Join-Path $toolchainBin $dll
       if (Test-Path -LiteralPath $source -PathType Leaf) {
         $destination = Join-Path $staging $dll
         if (-not (Test-Path -LiteralPath $destination)) {
           Copy-Item -LiteralPath $source -Destination $destination
-          Assert-X64Pe $destination
+          Assert-TargetPe $destination
         }
         $pending.Enqueue($destination)
         continue
@@ -161,7 +167,7 @@ try {
     throw "binary path sanitizer failed"
   }
   foreach ($file in $releaseFiles) {
-    Assert-X64Pe $file.FullName
+    Assert-TargetPe $file.FullName
   }
 
   $version = Invoke-IsolatedQemu $stagedQemu "--version"
