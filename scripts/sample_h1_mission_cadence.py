@@ -38,6 +38,7 @@ def summarize(
     interval_ms: int,
     failures: int,
     configuration: dict[str, Any],
+    mode: str,
 ) -> dict[str, Any]:
     if len(rows) < 2:
         raise RuntimeError("fewer than two status samples were captured")
@@ -77,6 +78,7 @@ def summarize(
     return {
         "format": "h1-mission-cadence-v1",
         "base_url": base_url.rstrip("/"),
+        "mode": mode,
         "requested_duration_seconds": duration,
         "actual_duration_seconds": round(elapsed, 3),
         "sample_interval_ms": interval_ms,
@@ -122,13 +124,18 @@ def main() -> None:
     parser.add_argument("--duration", type=float, default=20.0)
     parser.add_argument("--interval-ms", type=int, default=40)
     parser.add_argument("--countdown", type=int, default=5)
+    parser.add_argument(
+        "--mode",
+        choices=("idle",),
+        default="idle",
+        help="label the sample; only the reproducible default-standing method is accepted",
+    )
     parser.add_argument("--output", type=Path)
     args = parser.parse_args()
     if args.duration <= 0 or not 20 <= args.interval_ms <= 1000 or args.countdown < 0:
         parser.error(
             "duration/countdown must be non-negative and interval-ms must be 20..1000"
         )
-
     initial_status = fetch_status(args.base_url, 2.0)
     if not initial_status.get("running"):
         raise SystemExit(f"emulator is not running at {args.base_url.rstrip('/')}")
@@ -136,7 +143,7 @@ def main() -> None:
     for remaining in range(args.countdown, 0, -1):
         print(f"sampling starts in {remaining}...", flush=True)
         time.sleep(1)
-    print("CLICK_NOW: click a distant map point and keep Mission moving", flush=True)
+    print("IDLE_NOW: leave Mission untouched for the full sample", flush=True)
 
     rows: list[dict[str, int | float]] = []
     failures = 0
@@ -189,6 +196,7 @@ def main() -> None:
         args.interval_ms,
         failures,
         configuration,
+        args.mode,
     )
     rendered = json.dumps(report, ensure_ascii=False, indent=2) + "\n"
     if args.output:

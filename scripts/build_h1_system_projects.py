@@ -12,7 +12,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "systems"
-SDK_COMMIT = "352889b9fa9750cd8e4cb4806e5fc0e8edeac211"
+SDK_COMMIT = "067fe072477861dfc8949d7b1a55279fb92d2548"
 EMULATOR_COMMIT = "2416cfc4bb5295a1dad44c1129159620416b3862"
 
 COMMON_GITIGNORE = """# Proprietary and generated local state
@@ -426,7 +426,10 @@ def materialize(project: Path, version: str) -> None:
     v2_only = {
         "merge_h1_v2_b_volume.py",
         "navigate_h1_v2_mission.py",
+        "test_navigate_h1_v2_mission.py",
         "sample_h1_mission_cadence.py",
+        "patch_h1_v2_mission_trace_location.py",
+        "test_patch_h1_v2_mission_trace_location.py",
         "patch_h1_v2_mission_resource_drive.py",
         "test_patch_h1_v2_mission_resource_drive.py",
     }

@@ -1,6 +1,6 @@
 # Open-source project structure
 
-Updated: 2026-08-18
+Updated: 2026-08-24
 
 The private research workspace contains vendor packages, raw NAND images,
 toolchains, IDA state, game data, and generated test artifacts. Those files are
@@ -10,19 +10,22 @@ input hashes, and pinned component revisions.
 ## Published baseline
 
 The two version repositories were created as public GitHub projects on
-2026-08-18. Their current `main` commits and source-only archive tree identities
-are:
+2026-08-18. Their current `main` commits and source-only tree identities are:
 
 | Project | Git commit | Files | Archived tree SHA-256 |
 | --- | --- | ---: | --- |
-| `bbk-h1-1x` | `451d165c40fd9ac1145b4733634450edfd141f39` | 106 | `64FDECD15041A30FCA9B4A164EE3ED17A6A46BE1E1F3C4543943CB7F942206DF` |
-| `bbk-h1-2x` | `6266944ebe74100f932fd70fdfa627b0bb1f2669` | 110 | `B8C73DBE5E2F2811D301CC1DFC7020CAB7576240EA9DD903A1BBF1ECA7C8AECB` |
+| `bbk-h1-1x` | `b68785b1ff4e19495527d5379aaeecaf7fa96e25` | 106 | `A273AE90FE030FE3B0E8E5BF51FE6ACA5AB3FE8B3264DA296ED9D0E36F2E8B35` |
+| `bbk-h1-2x` | `71daedd434ab47fd885a3c7e655fe2a471a76c69` | 114 | `B1724C974C0564878322A985D11BD03B06974B77DDA28B126C6A568EED5DBA78` |
 
-GitHub accepted both `main` branch updates after publication. Their exact
-source ZIP archives and the parent research archive passed
-`audit_release_secrets.py` with zero findings before publication. The 1.X
-update contains only the shared bounded-FTL and batched-ECC tooling; native B
-volume, Mission path and fixed-navigation work remains isolated to 2.X.
+GitHub accepted both `main` branch updates. Before the 2026-08-24 push, their
+exact source ZIP archives passed `audit_release_secrets.py` with zero findings.
+The 1.X ZIP SHA-256 is
+`5B5580A8E7FB6E71DD408BED075D011E347486F4BED1473E48D9B6CE446ADA7B`;
+the 2.X ZIP SHA-256 is
+`E7F67A53659B1E345FF757B9B00D6D4F0B72B0B013F8C4DDC55F75C417F6CA9E`.
+The 1.X change only advances the shared SDK pin. Safe Mission trace placement,
+signature-verified page-two navigation and default-standing cadence tooling
+remain isolated to 2.X.
 
 ## Version repositories
 

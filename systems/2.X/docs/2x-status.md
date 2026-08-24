@@ -1,6 +1,6 @@
 # H1 V2.x system reconstruction
 
-Updated: 2026-08-04
+Updated: 2026-08-24
 
 ## Official inputs
 
@@ -762,20 +762,33 @@ changed. This leaves all V2 system paths and all unrelated BDA paths on A.
 
 `navigate_h1_v2_mission.py` attaches to an already healthy cold boot by default
 and navigates without taking or matching screenshots; a restart is available
-only through explicit `--reset`. It clears the boot prompts, exits the restored
-native application and category with two hardware Return events, taps inside
-Tools/Entertainment at `(462,251)`, sends Page Up to select its first page, and
-selects the native Time slot at `(153,207)`. That slot loads the verified
-external Mission wrapper because it replaces `中学时间.bda`.
+only through explicit `--reset`. It clears the boot prompts, exits restored UI
+state, selects Other at `(380,258)`/`(390,258)`, selects Tools/Entertainment at
+`(430,258)`/`(440,258)`, taps the on-screen down arrow at `(455,216)` twice,
+then selects the real Mission icon on page two at `(402,61)` and sends hardware
+Confirm. Page Up and Page Down cycle categories and must not be used to change
+the Tools/Entertainment page.
 
-The earlier `(438,251)` category coordinate was on a boundary and the earlier
-`(402,61)` target could launch an unrelated English BDA. After correcting both,
-a live run reached the Mission main menu with advancing guest instructions and
-no QEMU error. The script now reports only `mission-launch-inputs-sent`; final
-screen identity remains an explicit terminal check. On 2026-08-18 the user also
-manually confirmed that this first Mission entry enters the game and is
-playable. The old `V1Loop` entry reported missing data and the embedded
-experiment hung; both were removed by restoring their native V2 BDAs.
+The navigator reads the wrapper's reserved trace arena and requires a fresh
+`GAME_START` or `GAME_RETURN` transition before reporting
+`mission-wrapper-confirmed`. A 2026-08-24 healthy cold-boot run reached
+`GAME_START` with 28 fixed input events and no screenshots. The 2026-08-18 user
+test had already established that the external entry is playable. The old
+`V1Loop` entry reported missing data and the embedded experiment hung; both
+were removed by restoring their native V2 BDAs.
+
+The first diagnostic wrapper wrote its compact phase marker at virtual
+`0x83E00B00`. That address overlapped unsafe compatibility memory and could
+make Mission return before gameplay with audio DMA still at zero. The marker
+was moved to the wrapper's reserved stage arena at virtual `0x83F0E000`
+(physical `0x03F0E000`).
+`patch_h1_v2_mission_trace_location.py` accepts the old wrapper only when each
+of the two expected marker instruction sequences occurs exactly once, changes
+those sequences, and validates the output BDA. The deployed safe wrapper has
+SHA-256
+`154B601539E1B865A08D658B2C2038093C5BCA4E1C34935183977B5008E93C2C`.
+The SDK source uses the same arena for a persistent header, generation counter
+and bounded trace records; the navigator supports both trace formats.
 
 One redundant BootROM restart stopped in a repeated exception loop at PC
 `0x81002834` while the retained frame still said `请重新设置时间！`. Input events
@@ -788,41 +801,30 @@ The cleaned private image is:
 ```text
 work/v2-emulator/h1-v2-mission-b.raw
 size:    1,107,296,256 bytes
-SHA-256: 529D02B39AD015B1B846C5F83B20ABF6F45B49590B771ED6C32E6994D46E512C
+SHA-256: 535D373C6DAEC12654C7611B81064AC2C64E1F742C9B4BFF0C6E67BC39A89C8F
 ```
 
-## Mission movement cadence A/B
+## Mission default-standing cadence A/B
 
-A coordinated 1.X/2.X map-movement comparison on 2026-08-18 kept both H1
-instances at the same 64 MiB, 336 MHz guest clock, single-thread TCG and 17 ms
-LCD refresh settings. It did not enable instruction-clock acceleration, MTTCG,
-extra RAM or any other performance option. The sampler read `/api/status` only;
-it did not capture screenshots, inject input or change emulator state.
+Performance comparisons now use Mission's untouched default standing
+animation. Operator and scripted map clicks are excluded because their timing
+and target distance are not reproducible. Both 30-second samples used 64 MiB,
+single-thread TCG and `instruction_clock=false`; the sampler only read status
+and neither injected input nor captured screenshots.
 
-After the operator's click was visible in the frame sequence, V1 advanced 260
-changed frames in 13.30 seconds (19.55 changed frames/s). Its one-second guest
-instruction intervals remained between approximately 4.4 and 10.3 million
-instructions/s. The equivalent V2 Mission interval advanced 98 changed frames
-in 14.82 seconds (6.61 changed frames/s). During the visible pauses, one V2
-interval advanced only 3,206 guest instructions in about 1.27 seconds; the next
-several intervals remained in the tens or hundreds of thousands while AIC DMA
-completions continued to advance.
+| System | Changed frames/s | Median gap | P95 gap | Maximum gap | Guest minimum | Guest median | Audio DMA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| V1 Mission | 1.735 | 578.472 ms | 619.822 ms | 633.773 ms | 6.780 M/s | 9.614 M/s | +323 |
+| V2 compatibility stage | 1.739 | 589.222 ms | 624.195 ms | 707.183 ms | 8.505 M/s | 15.125 M/s | +323 |
 
-Both instances use the host bridge's same 1,000 ms performance packet. V1 did
-not exhibit the V2 instruction-rate collapse, so that packet and a browser-only
-paint delay are excluded as the cause of this observation. The confirmed fault
-domain is the V1 Mission-on-V2 application/service compatibility path: the
-guest's Mission main path stops doing useful work while emulated audio hardware
-continues. This does not yet identify the individual service. Investigation
-should next trace the V1 `GUI+0x84C..0x9F8` event, wait and drawing calls against
-their relocated V2 implementations; changing CPU/RAM/TCG settings would hide
-rather than diagnose the defect.
-
-`scripts/sample_h1_mission_cadence.py` makes the status-only measurement
-repeatable. Run it separately against ports 8793 and 8796, click a distant map
-point when it prints `CLICK_NOW`, and retain only the small JSON reports:
+V2 differs by +0.23% in changed-frame rate and +4.373 ms at P95. It has one
+707.183 ms maximum outlier, but no approximately one-second guest-instruction
+collapse. At the reproducible default-standing position, the safe stage-arena
+wrapper therefore matches V1 closely and the former periodic stall is not
+present. Earlier manually triggered movement reports are excluded from this
+conclusion. `sample_h1_mission_cadence.py` defaults to `--mode idle`:
 
 ```powershell
-python scripts/sample_h1_mission_cadence.py --base-url http://127.0.0.1:8793 --output work/mission-cadence-v1.json
-python scripts/sample_h1_mission_cadence.py --base-url http://127.0.0.1:8796 --output work/mission-cadence-v2.json
+python scripts/sample_h1_mission_cadence.py --base-url http://127.0.0.1:8793 --duration 30 --mode idle --output work/mission-idle-v1.json
+python scripts/sample_h1_mission_cadence.py --base-url http://127.0.0.1:8796 --duration 30 --mode idle --output work/mission-idle-v2.json
 ```

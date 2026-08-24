@@ -1,6 +1,6 @@
 # V1 games on V2: live research status
 
-Updated: 2026-08-18
+Updated: 2026-08-24
 
 The filename is retained for link compatibility; this is now a continuously
 maintained status document, not a handoff. Research remains active.
@@ -39,7 +39,7 @@ installs V1-shaped GUI/FS/SYS/RES tables, executes the unmodified V1 payload at
 
 The auditable rule metadata is in `scripts/h1_v2_game_compat_rules.py`; the SDK
 contains a standalone copy plus regression tests. The published SDK component
-commit is `352889b9fa9750cd8e4cb4806e5fc0e8edeac211`.
+commit is `067fe072477861dfc8949d7b1a55279fb92d2548`.
 
 ## Mission and storage state
 
@@ -79,26 +79,38 @@ only (`screenshots_used=false`, 71 input events). One terminal screenshot was
 taken only after navigation completed; no screenshot matching controls the
 route.
 
-A later dual-system comparison exposed two false assumptions in that route.
-The old Tools/Entertainment tap at `(438,251)` was on a category boundary, and
-the old `(402,61)` target could launch an unrelated English application.
-Mission actually reuses the native Time slot because the compatibility wrapper
-replaces `中学时间.bda`. The fixed route now taps inside Tools/Entertainment at
-`(462,251)`, sends Page Up to select its first page, and taps Time at
-`(153,207)`. A live run reached the Mission main menu with advancing guest
-instructions and no QEMU error.
+A later sparse visual check corrected the route. The real Mission icon is the
+last icon on page two of Tools/Entertainment, not the first-page Time icon.
+Page Up and Page Down cycle categories rather than pages. The fixed route now
+selects Other at `(380,258)`/`(390,258)`, selects Tools/Entertainment at
+`(430,258)`/`(440,258)`, taps its on-screen down arrow at `(455,216)` twice,
+then selects Mission at `(402,61)` and sends hardware Confirm. Paired adjacent
+category taps tolerate a dropped pen event and are idempotent.
 
 The script now attaches to an already healthy cold boot by default; `--reset`
-is explicit. One redundant BootROM restart stopped in a repeated exception loop
-at PC `0x81002834` while still displaying `请重新设置时间！`. The backend accepted
-Return/Confirm input, but the guest could not consume it, so this was not a key
-mapping failure. A complete frontend/QEMU restart recovered normal instruction
-progress. The script reports `mission-launch-inputs-sent`, not an unverified
-claim that the target frame was reached.
+is explicit. It does not take or match screenshots. Instead it reads the
+wrapper's reserved trace arena and requires a fresh `GAME_START` or
+`GAME_RETURN` transition before reporting `mission-wrapper-confirmed`. A
+2026-08-24 cold-boot run reached `GAME_START` with 28 fixed input events. One
+redundant BootROM restart stopped in a repeated exception loop at PC
+`0x81002834` while still displaying `请重新设置时间！`; a complete frontend/QEMU
+restart recovered normal instruction progress. Such starts are discarded
+before navigation or cadence sampling.
+
+The original diagnostic marker at virtual `0x83E00B00` overlapped unsafe
+compatibility memory and could make Mission return early with no audio. It was
+moved to the wrapper's reserved stage arena at virtual `0x83F0E000` (physical
+`0x03F0E000`). The checked patcher requires exactly the two expected marker
+instruction sequences and validates the resulting BDA. The deployed wrapper's
+SHA-256 is
+`154B601539E1B865A08D658B2C2038093C5BCA4E1C34935183977B5008E93C2C`.
+The SDK source now writes a persistent trace header and generation counter in
+the same arena; the navigator supports that format and the deployed compact
+phase marker during migration.
 
 The cleaned local image is `work/v2-emulator/h1-v2-mission-b.raw`, 1,107,296,256
 bytes, SHA-256
-`529D02B39AD015B1B846C5F83B20ABF6F45B49590B771ED6C32E6994D46E512C`.
+`535D373C6DAEC12654C7611B81064AC2C64E1F742C9B4BFF0C6E67BC39A89C8F`.
 It remains private and is not a Git artifact.
 
 ## Repository and runtime policy
@@ -122,19 +134,23 @@ do not reintroduce the missing-data or embedded-hang probes into the final menu.
 Update the rule table, SDK tests, this status document and all affected public
 repositories after each confirmed correction.
 
-## Movement-cadence diagnosis
+## Default-standing cadence regression
 
-The 2026-08-18 same-settings A/B test excludes a simulator-wide or browser-only
-pause. V1 Mission sustained 260 changed frames over 13.30 seconds of detected
-movement (19.55/s), with about 4.4--10.3 million guest instructions/s. V2
-Mission advanced 98 changed frames over 14.82 seconds (6.61/s) and suffered an
-interval with only 3,206 guest instructions over about 1.27 seconds, followed
-by several more depressed intervals. Audio DMA continued throughout. Both runs
-used 64 MiB, the 336 MHz guest clock, single-thread TCG, the 17 ms LCD refresh
-and the same one-second host performance telemetry.
+Cadence comparisons now use Mission's untouched default standing animation.
+Operator and scripted map clicks are excluded because their timing and target
+distance are not reproducible. Both 30-second samples used 64 MiB,
+single-thread TCG and `instruction_clock=false`; the sampler only read runtime
+status and did not inject input or capture screenshots.
 
-The remaining stutter is therefore in the V1-on-V2 Mission/service compatibility
-path, not a reason to increase emulator performance. The next target is dynamic
-tracing of the relocated V1 game GUI event/wait/drawing services. The reusable
-`scripts/sample_h1_mission_cadence.py` sampler reads status only and records no
-screenshots or local filesystem paths.
+| System | Changed frames/s | Median gap | P95 gap | Maximum gap | Guest minimum | Guest median | Audio DMA |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| V1 Mission | 1.735 | 578.472 ms | 619.822 ms | 633.773 ms | 6.780 M/s | 9.614 M/s | +323 |
+| V2 compatibility stage | 1.739 | 589.222 ms | 624.195 ms | 707.183 ms | 8.505 M/s | 15.125 M/s | +323 |
+
+V2 differs by only +0.23% in changed-frame rate and +4.373 ms at P95. It has
+one 707.183 ms maximum outlier, but no approximately one-second instruction
+collapse. At the reproducible default-standing position, the safe stage-arena
+wrapper therefore matches V1 cadence closely and the former periodic stall is
+not present. Earlier manually triggered movement samples are not used for this
+conclusion. The sampler defaults to `--mode idle` so an omitted mode cannot
+silently reintroduce the old method.
