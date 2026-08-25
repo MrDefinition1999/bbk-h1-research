@@ -11,12 +11,19 @@ $WorkspacePrefix = $Workspace.TrimEnd([System.IO.Path]::DirectorySeparatorChar) 
 # V1/V2 images, private inputs, public component repositories, and deliverables
 # are intentionally absent from this list.
 $RelativeTargets = @(
+    "backups\BBK-H1-essential-source-and-research-sanitized-2026-08-05.zip",
     "backups\BBK-H1-essential-source-and-research-sanitized-2026-08-06.zip",
     "system-recovery-h1.elf.i64",
     "h1-bda-sdk\.pytest_cache",
     "h1-bda-sdk\build",
     "work\emulator",
     "work\rebuild\tools",
+    "work\rebuild\tmp",
+    "work\rebuild\qemu-gpg",
+    "work\rebuild\msys2-base-x86_64-20260611.sfx.exe",
+    "work\rebuild\qemu-11.0.0.tar.xz",
+    "work\rebuild\qemu-11.0.0.tar.xz.sig",
+    "work\rebuild\qemu-release-key.asc",
     "work\rebuild\firmware",
     "work\rebuild\qemu-11.0.0",
     "work\rebuild\qemu-11.0.0-build-bbk9588-win",
@@ -28,6 +35,7 @@ $RelativeTargets = @(
     "work\v2-mission-full-expanded-template-6144.raw",
     "work\v2-mission-biologytest.raw",
     "work\v2-v1-game-compat-assets-test.raw",
+    "work\v2-v1-game-compat-test.raw",
     "work\v2-mission-pettemplate.raw",
     "work\v2-mission-initfix.raw",
     "work\v2-mission-full-native.raw",
@@ -39,7 +47,27 @@ $RelativeTargets = @(
     "work\kov-release-final",
     "work\captures",
     "work\v2-mission-loader-debug",
-    "work\v2-mission-loader-external-debug"
+    "work\v2-mission-loader-external-debug",
+    "work\analysis\qemu-system-mipsel-before-aic-final-drain.exe",
+    "work\analysis\firmware\h1-project-layout.tmp.elf",
+    "work\analysis\hzk-test.bin",
+    "work\analysis\hzk-assets-test.bin",
+    "work\analysis\h2-encrypted-test-clip.avi",
+    "work\analysis\v1-ad-video.avi",
+    "work\analysis\v1-robinsons-video.avi",
+    "work\analysis\v1-v2-flying-video-compat-v2.bda",
+    "work\analysis\v1-v2-flying-video-compat-v2.json",
+    "work\analysis\v1-v2-flying-video-compat-v3.bda",
+    "work\analysis\v1-v2-flying-video-compat-v3.json",
+    "work\analysis\v2-native-flying-video-base40.elf",
+    "work\analysis\v2-native-flying-video.metadata.json",
+    "work\analysis\v2-native-flying-video.payload",
+    "work\analysis\v2-video-arm64-baseline-raw.json",
+    "work\analysis\v2-video-arm64-tail-raw.json",
+    "work\analysis\v2-video-full-playback-raw.json",
+    "work\analysis\v2-video-patched-full-raw.json",
+    "work\analysis\v2-video-post-end-raw.json",
+    "work\v2-emulator\old-player.bin"
 )
 
 function Resolve-SafeTarget([string] $RelativePath) {
@@ -102,8 +130,10 @@ Get-ChildItem -LiteralPath $Workspace -Directory -Recurse -Force -ErrorAction Si
     } |
     ForEach-Object { $Targets.Add($_.FullName) }
 
-# IDA databases and visual/debug captures are generated evidence, not source.
-$GeneratedExtensions = @(".i64", ".id0", ".id1", ".id2", ".nam", ".til", ".png", ".frame", ".rgba")
+# Visual/debug captures and logs are reproducible transients.  Preserve IDA
+# databases: their annotations are primary reverse-engineering state needed by
+# later research even when the original input can be re-extracted.
+$GeneratedExtensions = @(".png", ".frame", ".rgba", ".log")
 foreach ($Area in @("work\analysis", "work\v2-emulator")) {
     $AreaPath = Resolve-SafeTarget $Area
     if (Test-Path -LiteralPath $AreaPath) {
@@ -112,6 +142,12 @@ foreach ($Area in @("work\analysis", "work\v2-emulator")) {
             ForEach-Object { $Targets.Add($_.FullName) }
     }
 }
+
+# Early navigation screenshots were also written directly under work/.
+$WorkPath = Resolve-SafeTarget "work"
+Get-ChildItem -LiteralPath $WorkPath -File -Force -ErrorAction SilentlyContinue |
+    Where-Object { $_.Extension.ToLowerInvariant() -in $GeneratedExtensions } |
+    ForEach-Object { $Targets.Add($_.FullName) }
 
 $Targets = $Targets | Sort-Object -Unique
 $ProtectedRoots = @(
