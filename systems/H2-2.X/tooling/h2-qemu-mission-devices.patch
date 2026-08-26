@@ -1,0 +1,58 @@
+diff --git a/hw/timer/ingenic_tcu.c b/hw/timer/ingenic_tcu.c
+index 2c8e5b7..56f9bd1 100644
+--- a/hw/timer/ingenic_tcu.c
++++ b/hw/timer/ingenic_tcu.c
+@@ -307,3 +307,15 @@ static uint64_t ingenic_tcu_read(void *opaque, hwaddr addr, unsigned size)
+         case REG_OSTCSR:
+             data = s->ost.tcsr;
+             break;
++        case REG_TDR:
++            data = s->wdt.tdr;
++            break;
++        case REG_TCER:
++            data = s->wdt.tcer;
++            break;
++        case REG_TCNT:
++            data = s->wdt.tcnt;
++            break;
++        case REG_TCSR:
++            data = s->wdt.tcsr;
++            break;
+@@ -396,10 +408,11 @@ static void ingenic_tcu_write(void *opaque, hwaddr addr, uint64_t data, unsigned
+             break;
+         case REG_TCER:
+             s->wdt.tcer = data & 0x01;
+-            if (s->wdt.tcer & 0x01) {
+-                qemu_log_mask(LOG_UNIMP, "%s: WDT not implemented\n", __func__);
+-                qemu_system_reset_request(SHUTDOWN_CAUSE_GUEST_RESET);
+-            }
++            /*
++             * Do not reset immediately when software arms the watchdog.  A
++             * real JZ4750L resets only after TCNT reaches TDR; preserving the
++             * enabled state is safer until the watchdog timer is modelled.
++             */
+             break;
+         case REG_TCNT:
+             s->wdt.tcnt = data & 0xffff;
+diff --git a/hw/adc/ingenic_adc.c b/hw/adc/ingenic_adc.c
+index a662aaa..a10cf8f 100644
+--- a/hw/adc/ingenic_adc.c
++++ b/hw/adc/ingenic_adc.c
+@@ -278,10 +278,12 @@ static void ingenic_adc_write(void *opaque, hwaddr addr, uint64_t data,
+     switch (addr) {
+     case REG_ADENA:
+         s->adena = data & 0x07;
+-        if (data & ADENA_SLEEP_MASK) {
+-            qemu_log_mask(LOG_UNIMP, "%s: TODO SLEEP mode 0x%" PRIx64 "\n",
+-                          __func__, data);
+-            qmp_stop(NULL, NULL);
+-        }
++        /*
++         * H2 writes 0x44 while enabling the touchscreen.  Preserve the
++         * implemented low three enable bits and ignore the unmodelled sleep
++         * request; pausing the whole VM here deadlocks a normal guest boot.
++         */
+         if (!s->sampler_enabled) {
+             ingenic_adc_set_sampler_enable(s, !!s->adena);
+         }
+diff --git a/hw/timer/ingenic_tcu.c b/hw/timer/ingenic_tcu.c

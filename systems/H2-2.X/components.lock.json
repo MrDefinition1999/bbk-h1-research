@@ -1,0 +1,25 @@
+{
+  "format": "bbk-h2-components-v1",
+  "components": [
+    {
+      "name": "OpenNoah QEMU H2 fork",
+      "url": "https://github.com/OpenNoah/qemu.git",
+      "commit": "f29522c83d9aee7b8e2251647363a09a4eea4302",
+      "branch": "ingenic-v11.0.0",
+      "license": "GPL-2.0-and-upstream-QEMU-terms"
+    },
+    {
+      "name": "OpenNoah JZ4750L bootrom",
+      "url": "https://github.com/OpenNoah/bootrom.git",
+      "commit": "2759ce0020c3e823384d82af34741f93ebfbe46e",
+      "license": "MIT"
+    },
+    {
+      "name": "noVNC",
+      "url": "https://github.com/novnc/noVNC/archive/refs/tags/v1.7.0.zip",
+      "version": "1.7.0",
+      "sha256": "D55E9CCE9A611294DF33C7200F32F35108652DE2D86A468BEBCFC6F2A1C9A196",
+      "license": "MPL-2.0-and-MIT"
+    }
+  ]
+}

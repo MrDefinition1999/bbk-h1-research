@@ -1,0 +1,13 @@
+/.local/
+/build/
+/dist/
+/runtime/web/novnc/
+__pycache__/
+*.py[cod]
+*.log
+*.raw
+*.bin
+*.exe
+*.dll
+*.zip
+*.rar

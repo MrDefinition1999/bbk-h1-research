@@ -1,0 +1,437 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>BBK H2 Emulator</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif;
+      background: #eef0f1;
+      color: #202322;
+    }
+    * { box-sizing: border-box; letter-spacing: 0; }
+    html, body { min-height: 100%; margin: 0; }
+    body { background: #eef0f1; }
+    button { border: 0; cursor: pointer; font: inherit; }
+    button:disabled { cursor: default; opacity: .42; }
+    .topbar {
+      min-height: 58px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 0 22px;
+      color: #f7f8f7;
+      background: #222725;
+      border-bottom: 3px solid #58a96f;
+    }
+    .brand { display: flex; align-items: baseline; gap: 10px; min-width: 0; }
+    .brand strong { font-size: 19px; font-weight: 680; white-space: nowrap; }
+    .brand .brand-mode { color: inherit; font-size: inherit; }
+    .brand .platform { color: #b9c0bc; font-size: 12px; white-space: nowrap; }
+    .lifecycle { display: flex; align-items: center; gap: 6px; }
+    .icon-button {
+      width: 38px;
+      height: 36px;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 4px;
+      color: #e9ecea;
+      background: #383e3b;
+      font-size: 17px;
+      line-height: 1;
+    }
+    .icon-button:hover:not(:disabled) { background: #4b534f; }
+    .icon-button.active { background: #52655a; }
+    .icon-button.danger { color: #ffd9d7; background: #743c39; }
+    .connection {
+      width: 9px;
+      height: 9px;
+      margin-right: 8px;
+      border-radius: 50%;
+      background: #c05c56;
+      box-shadow: 0 0 0 3px rgba(192, 92, 86, .15);
+    }
+    .connection.running {
+      background: #68c27e;
+      box-shadow: 0 0 0 3px rgba(104, 194, 126, .15);
+    }
+    .workspace {
+      min-height: calc(100vh - 58px);
+      display: grid;
+      grid-template-columns: minmax(560px, 1fr) 270px;
+    }
+    .stage {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 24px;
+      background: #d8dcdd;
+    }
+    .screen-shell {
+      width: min(100%, 960px);
+      aspect-ratio: 480 / 272;
+      position: relative;
+      overflow: hidden;
+      border: 8px solid #2c302f;
+      border-radius: 8px;
+      background: #080a09;
+      box-shadow: 0 10px 24px rgba(32, 37, 35, .18);
+      touch-action: none;
+      user-select: none;
+    }
+    #screen {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #0d100f;
+      outline: none;
+      cursor: crosshair;
+    }
+    #screen canvas {
+      width: 100% !important;
+      height: 100% !important;
+      object-fit: contain;
+      image-rendering: pixelated;
+    }
+    .screen-state {
+      position: absolute;
+      inset: 8px;
+      display: grid;
+      place-items: center;
+      color: #c5cbc7;
+      background: #0d100f;
+      font-size: 13px;
+      pointer-events: none;
+    }
+    .screen-state.hidden { display: none; }
+    .device-controls {
+      width: min(100%, 720px);
+      min-height: 96px;
+      display: grid;
+      grid-template-columns: 168px minmax(120px, 1fr) 188px;
+      align-items: center;
+      gap: 20px;
+    }
+    .direction-keys,
+    .action-keys { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+    .volume-keys { display: grid; grid-template-columns: repeat(2, 74px); gap: 8px; }
+    .control-center { display: flex; align-items: center; justify-content: center; gap: 10px; }
+    .device-key {
+      min-width: 74px;
+      height: 42px;
+      border: 1px solid #a6acab;
+      border-bottom-width: 3px;
+      border-radius: 5px;
+      color: #272b29;
+      background: #fafbfa;
+      font-weight: 650;
+      user-select: none;
+      touch-action: manipulation;
+    }
+    .device-key:hover:not(:disabled),
+    .device-key.active { background: #dfece2; border-color: #67a875; }
+    .sidepanel {
+      min-width: 0;
+      padding: 22px 18px;
+      background: #f7f8f7;
+      border-left: 1px solid #c9cecb;
+      overflow: auto;
+    }
+    .sidepanel h2 { margin: 0 0 14px; font-size: 14px; line-height: 1.3; }
+    .settings-line {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      min-height: 36px;
+      border-bottom: 1px solid #e1e4e2;
+      font-size: 12px;
+    }
+    .settings-line span:first-child { color: #737975; }
+    .settings-line output {
+      max-width: 150px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      text-align: right;
+    }
+    .hardware-note {
+      margin: 18px 0 0;
+      padding-top: 14px;
+      color: #666d69;
+      border-top: 1px solid #d9ddda;
+      font-size: 11px;
+      line-height: 1.65;
+    }
+    .error {
+      margin-top: 16px;
+      padding: 10px 0;
+      color: #8d332f;
+      border-top: 2px solid #c5625b;
+      font-size: 12px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+    .error:empty { display: none; }
+    @media (max-width: 860px) {
+      .topbar { padding: 0 12px; }
+      .brand .platform { display: none; }
+      .workspace { display: block; }
+      .stage { min-height: auto; padding: 16px 10px; }
+      .sidepanel { border-left: 0; border-top: 1px solid #c9cecb; }
+      .device-controls { grid-template-columns: 156px 1fr 176px; gap: 8px; }
+      .volume-keys { grid-template-columns: repeat(2, 68px); }
+      .device-key { min-width: 68px; }
+    }
+    @media (max-width: 520px) {
+      .topbar { min-height: 54px; }
+      .brand strong { font-size: 17px; }
+      .brand .brand-mode, .brand .platform { display: none; }
+      .lifecycle { gap: 4px; }
+      .icon-button { width: 34px; height: 34px; }
+      .workspace { min-height: calc(100vh - 54px); }
+      .stage { padding: 10px 6px; }
+      .screen-shell { border-width: 4px; border-radius: 5px; }
+      .screen-state { inset: 4px; }
+      .device-controls {
+        width: 100%;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .direction-keys { grid-column: 1; grid-row: 1; }
+      .action-keys { grid-column: 2; grid-row: 1; }
+      .control-center { grid-column: 1 / -1; grid-row: 2; }
+    }
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <strong>BBK H2 <span class="brand-mode">Emulator</span></strong>
+      <span class="platform">JZ4750L / 480×272</span>
+    </div>
+    <div class="lifecycle" role="toolbar" aria-label="模拟器控制">
+      <span id="connection" class="connection" title="正在连接"></span>
+      <button class="icon-button key-button" data-key="power" title="电源键" aria-label="电源键">⏻</button>
+      <button id="stop" class="icon-button danger" title="停止" aria-label="停止">■</button>
+      <button id="reset" class="icon-button" title="重启" aria-label="重启">↻</button>
+    </div>
+  </header>
+  <main class="workspace">
+    <section class="stage" aria-label="H2 屏幕与按键">
+      <div class="screen-shell">
+        <div id="screen" tabindex="0"></div>
+        <div id="screenState" class="screen-state">等待 H2 framebuffer</div>
+      </div>
+      <div class="device-controls" aria-label="H2 七键控制">
+        <div class="direction-keys" aria-label="方向键">
+          <button class="device-key key-button" data-key="left" title="左" aria-label="左">←</button>
+          <button class="device-key key-button" data-key="right" title="右" aria-label="右">→</button>
+        </div>
+        <div class="control-center">
+          <div class="volume-keys" aria-label="音量键">
+            <button class="device-key key-button" data-key="volumedown">音量－ / 使命↓</button>
+            <button class="device-key key-button" data-key="volumeup">音量＋ / 使命↑</button>
+          </div>
+        </div>
+        <div class="action-keys">
+          <button class="device-key key-button" data-key="esc">返回</button>
+          <button class="device-key key-button" data-key="ret">确认</button>
+        </div>
+      </div>
+    </section>
+    <aside class="sidepanel">
+      <h2>运行状态</h2>
+      <div class="settings-line"><span>状态</span><output id="runStatus">正在启动</output></div>
+      <div class="settings-line"><span>运行时间</span><output id="uptime">0.0 s</output></div>
+      <div class="settings-line"><span>处理器</span><output>JZ4750L</output></div>
+      <div class="settings-line"><span>内存</span><output>32 MiB SDRAM</output></div>
+      <div class="settings-line"><span>屏幕</span><output>480 × 272</output></div>
+      <div class="settings-line"><span>存储</span><output>MSC0 / eMMC</output></div>
+      <div class="settings-line"><span>输入</span><output>SADC + 7 GPIO</output></div>
+      <div class="settings-line"><span>镜像写入</span><output id="snapshot">临时快照</output></div>
+      <div id="error" class="error"></div>
+      <p class="hardware-note">
+        首次启动请依次点击四角花形靶心完成原机触摸校准。H2 没有 H1 全键盘和联机芯片，
+        页面只提供实体机真实存在的七个按键。
+      </p>
+    </aside>
+  </main>
+  <script type="module">
+    import RFB from './novnc/core/rfb.js';
+
+    const connection = document.querySelector('#connection');
+    const errorBox = document.querySelector('#error');
+    const runStatus = document.querySelector('#runStatus');
+    const screen = document.querySelector('#screen');
+    const screenState = document.querySelector('#screenState');
+    const snapshot = document.querySelector('#snapshot');
+    const uptime = document.querySelector('#uptime');
+    let wsPort = new URLSearchParams(location.search).get('wsPort');
+    if (!wsPort) {
+      const response = await fetch('/api/status', { cache: 'no-store' });
+      const initialStatus = await response.json();
+      wsPort = String(initialStatus.websocketPort || '');
+    }
+    if (!wsPort) throw new Error('missing WebSocket port');
+    const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+    const rfb = new RFB(screen, `${scheme}://${location.hostname}:${wsPort}/`, { shared: true });
+    let stoppedByUser = false;
+    let recoveryTimer = 0;
+
+    async function recoverConnection() {
+      if (stoppedByUser) return;
+      try {
+        const state = await api('/api/status');
+        if (state.running && state.websocketPort) {
+          location.reload();
+          return;
+        }
+      } catch (_) {
+        // The fixed frontend may briefly be unavailable during process restart.
+      }
+      recoveryTimer = setTimeout(recoverConnection, 1000);
+    }
+
+    function scheduleRecovery(delay = 800) {
+      if (stoppedByUser) return;
+      clearTimeout(recoveryTimer);
+      recoveryTimer = setTimeout(recoverConnection, delay);
+    }
+
+    // H2's SADC samples a press over time.  Send a deterministic VNC button
+    // mask instead of trusting browser-specific MouseEvent.buttons values.
+    const canvas = screen.querySelector('canvas');
+    let tapReleaseTimer = 0;
+    let tapPoint = null;
+    const canvasPoint = event => {
+      const bounds = canvas.getBoundingClientRect();
+      return {
+        x: Math.max(0, Math.min(bounds.width - 1, event.clientX - bounds.left)),
+        y: Math.max(0, Math.min(bounds.height - 1, event.clientY - bounds.top)),
+      };
+    };
+    canvas.addEventListener('mousedown', event => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      tapPoint = canvasPoint(event);
+      clearTimeout(tapReleaseTimer);
+      rfb._handleMouseButton(tapPoint.x, tapPoint.y, 0x1);
+      tapReleaseTimer = setTimeout(() => {
+        if (tapPoint) rfb._handleMouseButton(tapPoint.x, tapPoint.y, 0x0);
+        tapPoint = null;
+      }, 1200);
+    }, true);
+    canvas.addEventListener('mouseup', event => {
+      if (event.button !== 0 || !tapPoint) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      clearTimeout(tapReleaseTimer);
+      const point = tapPoint;
+      tapReleaseTimer = setTimeout(() => {
+        rfb._handleMouseButton(point.x, point.y, 0x0);
+        if (tapPoint === point) tapPoint = null;
+      }, 260);
+    }, true);
+
+    rfb.scaleViewport = true;
+    rfb.resizeSession = false;
+    rfb.clipViewport = false;
+    rfb.focusOnClick = true;
+    rfb.addEventListener('connect', () => {
+      clearTimeout(recoveryTimer);
+      connection.classList.add('running');
+      connection.title = '已连接';
+      screenState.classList.add('hidden');
+      errorBox.textContent = '';
+      screen.focus();
+    });
+    rfb.addEventListener('disconnect', event => {
+      connection.classList.remove('running');
+      connection.title = event.detail.clean ? '已断开' : '连接异常';
+      runStatus.textContent = event.detail.clean ? '已停止' : '连接异常';
+      if (!event.detail.clean) errorBox.textContent = 'VNC 连接异常中断';
+      scheduleRecovery();
+    });
+    rfb.addEventListener('securityfailure', event => {
+      errorBox.textContent = `连接失败：${event.detail.reason || 'VNC 安全协商错误'}`;
+    });
+
+    async function api(path, options) {
+      const response = await fetch(path, options);
+      const result = await response.json();
+      if (!response.ok) throw new Error(result.error || `HTTP ${response.status}`);
+      return result;
+    }
+
+    async function post(path, body = {}) {
+      return api(path, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+    }
+
+    async function refreshStatus() {
+      try {
+        const state = await api('/api/status');
+        runStatus.textContent = state.running ? '运行中' : '已停止';
+        uptime.textContent = state.uptimeSeconds == null ? '-' : `${state.uptimeSeconds.toFixed(1)} s`;
+        snapshot.textContent = state.snapshot ? '临时快照' : '持久写入';
+      } catch (error) {
+        if (!errorBox.textContent) errorBox.textContent = `状态读取失败：${error.message}`;
+      }
+    }
+
+    for (const button of document.querySelectorAll('[data-key]')) {
+      button.addEventListener('click', async () => {
+        const key = button.dataset.key;
+        if (key === 'power' && !confirm('发送原机电源键？系统可能进入关机或待机状态。')) return;
+        button.classList.add('active');
+        try {
+          await post('/api/key', { key, duration: 140 });
+          errorBox.textContent = '';
+        } catch (error) {
+          errorBox.textContent = `按键失败：${error.message}`;
+        } finally {
+          setTimeout(() => button.classList.remove('active'), 160);
+          screen.focus();
+        }
+      });
+    }
+    document.querySelector('#reset').addEventListener('click', async () => {
+      if (!confirm('确定重新启动 H2？快照模式下本次设置不会保存。')) return;
+      try {
+        stoppedByUser = false;
+        await post('/api/restart');
+        runStatus.textContent = '正在重启';
+        errorBox.textContent = '';
+        await new Promise(resolve => setTimeout(resolve, 500));
+        location.reload();
+      } catch (error) {
+        errorBox.textContent = `重启失败：${error.message}`;
+      }
+    });
+    document.querySelector('#stop').addEventListener('click', async () => {
+      try {
+        stoppedByUser = true;
+        clearTimeout(recoveryTimer);
+        await post('/api/stop');
+        runStatus.textContent = '正在停止';
+      } catch (error) {
+        errorBox.textContent = `停止失败：${error.message}`;
+      }
+    });
+
+    refreshStatus();
+    setInterval(refreshStatus, 1000);
+  </script>
+</body>
+</html>

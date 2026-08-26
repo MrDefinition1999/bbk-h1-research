@@ -1,0 +1,9 @@
+# BBK @ibox H2 has seven dedicated GPIO keys, not the H1 keyboard matrix.
+# QEMU qcodes on the right are deliberately the matching PC/media keys.
+pin-0: left
+pin-1: right
+pin-2: ret
+pin-3: esc
+pin-4: volumedown
+pin-5: volumeup
+pin-6: power
