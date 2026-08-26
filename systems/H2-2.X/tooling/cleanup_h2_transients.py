@@ -13,6 +13,7 @@ H2_TARGETS = (
     REPOSITORY_ROOT / "work" / "h2" / "toolchain-temp",
     REPOSITORY_ROOT / "work" / "h2" / "mission-debug",
     REPOSITORY_ROOT / "work" / "h2" / "build-temp",
+    REPOSITORY_ROOT / "work" / "h2" / "screencheck",
     REPOSITORY_ROOT / "systems" / "H2-2.X" / "runtime" / "__pycache__",
     REPOSITORY_ROOT / "systems" / "H2-2.X" / "tooling" / "__pycache__",
     REPOSITORY_ROOT / "emulator" / "h2" / "__pycache__",
