@@ -2,6 +2,41 @@
 
 Last updated: 2026-08-27 (Asia/Irkutsk)
 
+## 2026-08-27 handoff transient cleanup
+
+After the consolidated H1/H2 handoff was written, the exact allowlisted script
+`scripts/recycle_handoff_transients_20260827.ps1` moved 37 obsolete or
+reproducible targets to the Windows Recycle Bin. It reclaimed 373,251,417 bytes
+(355.96 MiB). A second `-WhatIf` run selected zero targets.
+
+The cleanup covered only:
+
+- already-extracted Zig, LLVM-MinGW and innoextract download archives;
+- three superseded/generated H2 QEMU copies while retaining the active runtime;
+- H2 navigation screenshots, PPM captures, `screencheck` and three small logs;
+- Python caches and an empty build directory; and
+- `undo-h1v1-current.sectors.gz`, a 101,334,228-byte journal from the temporary
+  H1-payload branch that had already been applied to undo that branch and was
+  explicitly outside the active S1 rollback chain.
+
+The extracted Zig, `llvm-objcopy` and innoextract executables remain available.
+The active S1 manifest and all twelve journals needed to restore the current
+H2 image layer by layer were checked present. Four canonical private images
+were hash-verified after cleanup:
+
+| Image | SHA-256 |
+| --- | --- |
+| H1 V1.41 NAND | `614B0E5F85CA262A84BF26C7AD024043B32CE4CC6756D1C741E006846E134012` |
+| H1 V2 Mission+B NAND | `535D373C6DAEC12654C7611B81064AC2C64E1F742C9B4BFF0C6E67BC39A89C8F` |
+| H1 V2 seven-game NAND | `7CDBA2CA81CB3E252752C39F70642FBA8648AB8CBC3F2409B241BF3C1EA0D031` |
+| H2 current S1 eMMC | `F36A081422CFBC4C369652C93284A458842A4E421039ED5247A75A119786FC4C` |
+
+The workspace decreased from 11.159 GiB to 10.811 GiB. The Recycle Bin remains
+the recovery path until the user empties it. The optional large candidates
+(`h1-v2-runtime-probe.raw`, extracted H1 V2 inputs and the extracted H2
+toolchain) were deliberately retained because deleting them would reduce
+immediate reproduction capability.
+
 ## 2026-08-27 ARM64-only and H2 experiment snapshot
 
 The user retired the x86-64 emulator after the earlier validation work. No

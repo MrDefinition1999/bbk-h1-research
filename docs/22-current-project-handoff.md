@@ -288,7 +288,7 @@ S1 负载的实际 RAM 峰值尚未得到动态数据。它可能比 H1 版本�
 work/h2/s1-resource-test/undo-s1-original-shellctx.sectors.gz
 ```
 
-完整活动链需要按“从新到旧”逐层撤销，不能跳层，也不要再次应用已经撤销的 `undo-h1v1-current.sectors.gz` 分支：
+完整活动链需要按“从新到旧”逐层撤销，不能跳层。临时 H1 负载分支已经通过 `undo-h1v1-current.sectors.gz` 撤销；该 journal 不属于下面的活动链，并已在 2026-08-27 清理时移入回收站，不能再次应用：
 
 | 当前摘要前缀 | 使用 journal 后恢复到 |
 | --- | --- |
