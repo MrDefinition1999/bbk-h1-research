@@ -48,6 +48,10 @@ accidentally mixed with assumptions copied from H2 or 9588.
 - [22-current-project-handoff.md](22-current-project-handoff.md): current H1
   1.X/2.X and H2 results, active private-image state, unresolved work, and the
   canonical continuation guide for another AI.
+- [23-next-ai-start-prompt.md](23-next-ai-start-prompt.md): copy-ready prompt
+  that makes the next AI read the handoff, enforce safety/size/process/Git
+  rules, start all three simulators for user confirmation, and pause before
+  resuming the H2 S1 Mission port.
 
 ## Current phase
 

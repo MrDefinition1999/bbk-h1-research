@@ -381,3 +381,4 @@ python -m unittest systems/H2-2.X/tooling/test_navigate_h2_mission.py -v
 6. [21-v1-flying-video-port.md](21-v1-flying-video-port.md)：H1 2.X 飞天影音→1.X。
 7. `systems/H2-2.X/docs/reproduce.md`：H2 构建、运行和安装。
 8. `systems/H2-2.X/docs/mission-feasibility.md`：H2 使命两条分支的技术细节。
+9. [23-next-ai-start-prompt.md](23-next-ai-start-prompt.md)：下一位 AI 的可复制启动提示词，包含三模拟器人工确认停顿点和后续 S1 续研约束。
