@@ -368,6 +368,9 @@ python -m unittest systems/H2-2.X/tooling/test_navigate_h2_mission.py -v
 4. MIPS/原生二进制尽量做路径前缀映射并剥离发布符号；
 5. 删除或回收 `__pycache__`、编译缓存、失败截图和已被新 manifest 取代的临时文件，但保留当前镜像所需的撤销 journal；
 6. 不修改、提交或覆盖与本任务无关的用户工作。交接时 `scripts/qemu_gdb_read.py` 有一份既存用户改动，应继续排除在本轮提交之外。
+7. 整个项目目录当前硬上限为 20 GiB，19.5 GiB 预警；开始和结束时统计体积，预计达到上限前先安全清理或向用户确认。
+
+用户已确认本机安装了 IDA Pro。涉及固件、BDA、ABI、函数、结构体或汇编行为的逆向工作，必须先按 [02-ida-mcp.md](02-ida-mcp.md) 验证 IDA Pro MCP/`idalib-mcp` 可正常执行只读分析，并在需要逆向时始终使用它取得直接证据。若工具或技能不可用，先参考 <https://github.com/mrexodia/ida-pro-mcp> 修复、重启并重新验证，不得静默降级为仅凭旧报告或文本反汇编继续猜测。
 
 当前工作区仍有体积较大的私有必要项：H2 2 GiB 活动 eMMC、H1 V1/V2 约 1.1 GiB 的基准/测试 NAND、H2 Zig 工具链、S1/H1 使命资源和撤销日志。只有在确认能从锁定输入重建、结论已写入文档且当前回滚链不再依赖后，才可以通过可恢复方式清理。
 

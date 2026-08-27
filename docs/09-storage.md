@@ -2,6 +2,15 @@
 
 Last updated: 2026-08-27 (Asia/Irkutsk)
 
+## Current hard limit
+
+On 2026-08-27 the user set the whole project-directory hard limit to 20 GiB.
+The current post-cleanup baseline is approximately 10.811 GiB, and 19.5 GiB
+is the warning line. Work that could reach 20 GiB must stop for cleanup or user
+confirmation before allocating more space. Historical notes below about smaller
+VM headroom or earlier allowances describe their dated experiments; this 20 GiB
+project limit is the current policy, subject to actual free disk space if lower.
+
 ## 2026-08-27 handoff transient cleanup
 
 After the consolidated H1/H2 handoff was written, the exact allowlisted script

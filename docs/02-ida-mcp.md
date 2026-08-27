@@ -1,6 +1,24 @@
 # IDA Pro MCP setup and validation
 
-Last updated: 2026-07-22 (Asia/Irkutsk)
+Last updated: 2026-08-27 (Asia/Irkutsk)
+
+## Mandatory use for reverse engineering
+
+The user has confirmed that IDA Pro is installed on this computer. A future AI
+must not equate installation with a working MCP connection: before new binary
+reverse engineering, it must verify that IDA Pro MCP/`idalib-mcp` can enumerate
+tools or sessions, pass a health check, open the relevant database and perform
+at least one read-only decompilation or disassembly query.
+
+Firmware, BDA, ABI, function, structure, cross-reference and assembly analysis
+must use IDA Pro MCP and its IDAPython skill for direct evidence. Existing
+reports and local scripts are supporting material, not a substitute for that
+verification. If the tools are absent or unhealthy, pause the key reverse-
+engineering work, follow the current upstream installation and usage guidance
+at <https://github.com/mrexodia/ida-pro-mcp>, restart IDA/Codex if required and
+verify again. Do not claim IDA/MCP validation when no successful tool call was
+made. Back up configuration before changing it, keep proprietary inputs and IDA
+databases private, and stop unneeded headless workers or services after use.
 
 ## Initial observed state
 

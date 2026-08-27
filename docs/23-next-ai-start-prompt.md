@@ -30,10 +30,10 @@
 
 ## 2. 项目体积硬上限
 
-- 项目目录硬上限为 15 GiB，当前清理后基线约 10.811 GiB。
+- 项目目录硬上限为 20 GiB，当前清理后基线约 10.811 GiB。
 - 每次开始和结束工作都统计项目总字节数与顶层目录大小，并在进度消息中报告。
-- 任何可能生成完整 NAND/eMMC、副本、工具链或大跟踪文件的操作，先估算峰值；预计会达到 15 GiB 时必须停止，先清理或向我确认。
-- 14.5 GiB 视为预警线。一次只保留一个必要的新全量镜像实验，优先使用 QEMU snapshot、扇区 journal、稀疏/增量方案。
+- 任何可能生成完整 NAND/eMMC、副本、工具链或大跟踪文件的操作，先估算峰值；预计会达到 20 GiB 时必须停止，先清理或向我确认。
+- 19.5 GiB 视为预警线。一次只保留一个必要的新全量镜像实验，优先使用 QEMU snapshot、扇区 journal、稀疏/增量方案。
 - 单个新文件超过 500 MiB 时，先说明理由、预计寿命和清理条件。
 - 不保留无界日志、重复截图、重复工具链压缩包、`__pycache__` 或已经被新 manifest 取代的失败产物。
 
@@ -94,6 +94,14 @@ git -c http.proxy=socks5h://127.0.0.1:45535 ls-remote origin refs/heads/main
 - 每次发布或交接前运行 `python scripts/audit_release_secrets.py <target>`；必须审计最终 ZIP 本身。任何用户名、主机名、用户目录、Codex 配置路径、凭据、token 或私钥命中都是发布阻断项。
 - 厂商固件、NAND/eMMC、商业 BDA、游戏数据、视频、IDA 数据库、运行日志和 sector journal 不进入 Git/GitHub。
 
+## 7. IDA Pro MCP 是逆向工作的必备工具
+
+- 用户已确认这台电脑安装了 IDA Pro。接管后先完整读取 `docs/02-ida-mcp.md`，并在开始任何新的二进制逆向前验证 IDA Pro MCP/`idalib-mcp` 确实可用：能列出 MCP 工具或会话、通过健康检查、打开相关 IDA 数据库并完成至少一次只读的反编译或反汇编查询。不能只看见 IDA 安装目录就宣布 MCP 可用。
+- 凡是需要理解固件、BDA、ABI、函数调用、结构体、交叉引用或汇编行为的工作，始终使用 IDA Pro MCP（以及它提供的 IDAPython 技能）取得直接证据；本地脚本、旧报告和纯文本反汇编只能作为补充，不能替代 IDA MCP 的关键验证。
+- 如果当前会话没有暴露 IDA MCP 工具、技能不会使用或健康检查失败，不得静默降级后继续关键逆向，也不得声称已经通过 IDA 验证。先依据项目文档和官方仓库 <https://github.com/mrexodia/ida-pro-mcp> 学习、安装、配置或修复；官方当前更推荐 `idalib-mcp`。必要时完整重启 IDA 和 Codex 后重新验证，再继续逆向。
+- 修复安装或配置时必须备份原配置、避免记录本机隐私信息、不得上传商业二进制或私有 IDA 数据库。测试产生的 worker/服务在不再需要时及时关闭。
+- 在 IDA 中确认的函数名、参数类型、结构体、注释和交叉引用结论，要保存到私有数据库并同步写入项目 Markdown；Git/GitHub 只提交经过隐私审核的文字结论、源码和可复现脚本。
+
 # 第一阶段：读取资料与核验接管
 
 ## 1. 先读仓库规则
@@ -102,7 +110,7 @@ git -c http.proxy=socks5h://127.0.0.1:45535 ls-remote origin refs/heads/main
 
 1. `docs/22-current-project-handoff.md`：当前总状态、活动镜像、回滚链和下一研究边界。
 2. `docs/README.md`：文档索引。
-3. `docs/09-storage.md`：当前 15 GiB 约束、清理记录和保留规则。
+3. `docs/09-storage.md`：当前 20 GiB 约束、清理记录和保留规则。
 4. `docs/15-open-source-projects.md`：主仓库、H1 两个独立项目和发布边界。
 5. `docs/16-v2-system.md`：H1 V2 系统、A/B FTL、模拟器和 ABI 证据。
 6. `docs/19-v1-v2-mission-handoff.md`：H1 V1 使命→H1 V2 的已验证方法。
@@ -111,7 +119,7 @@ git -c http.proxy=socks5h://127.0.0.1:45535 ls-remote origin refs/heads/main
 9. `systems/H2-2.X/README.md`。
 10. `systems/H2-2.X/docs/reproduce.md`。
 11. `systems/H2-2.X/docs/mission-feasibility.md`。
-12. `docs/02-ida-mcp.md`：确认当前会话是否真的暴露 IDA MCP；没有工具时不得假装已经使用。
+12. `docs/02-ida-mcp.md`：按“IDA Pro MCP 是逆向工作的必备工具”规则验证当前会话；工具不可用时先修复，不得假装已经使用。
 
 然后阅读当前直接相关源码和测试：
 
@@ -171,7 +179,7 @@ S1 resources:
 
 ## 1. 启动前检查
 
-1. 确认项目仍低于 15 GiB。
+1. 确认项目仍低于 20 GiB。
 2. 查看 8793、8796、8797 是否监听，并检查占用 PID/命令行。
 3. 确认以下文件存在：
    - `emulator/windows-arm64/firmware/h1-system.raw`
@@ -252,7 +260,7 @@ $h2Process = Start-Process -FilePath python -ArgumentList @(
 4. 当前 `H2_KEEP_NATIVE_SCREEN=1` 与 S1 GUI 绘制路径之间的关系；先证明窗口所有权，再决定是否需要受控 LCD 模式切换。
 5. 只有 S1 首窗真正可见后，才测量 S1 的堆峰值；当前没有证据说明 S1 已解决或仍触发 H1 分支的内存问题。
 
-如果当前会话真正提供 IDA Pro MCP，按 `docs/02-ida-mcp.md` 检查连接后使用现有数据库做函数、交叉引用、结构体和调用约定分析。若没有 MCP，就使用已有报告、反汇编脚本和本地 IDA 状态；不得声称已经通过 IDA MCP 验证。
+按前述必备工具规则使用 IDA Pro MCP 和现有数据库做函数、交叉引用、结构体和调用约定分析。若 MCP 不可用，先按 `docs/02-ida-mcp.md` 和官方仓库修复并重新验证；在恢复之前暂停关键逆向，不得仅靠旧报告继续猜测，也不得声称已经通过 IDA MCP 验证。
 
 ## 3. 每次实验的工程约束
 
@@ -270,7 +278,7 @@ $h2Process = Start-Process -FilePath python -ArgumentList @(
 完成资料读取和启动前检查后，先向我简短报告：
 
 1. 当前 Git 状态以及你将保护的用户改动。
-2. 当前项目大小与 15 GiB 余量。
+2. 当前项目大小与 20 GiB 余量。
 3. 你对三个模拟器、两个 H2 使命分支和当前 S1 阻塞点的复述。
 4. 即将启动的三个命令和端口。
 
