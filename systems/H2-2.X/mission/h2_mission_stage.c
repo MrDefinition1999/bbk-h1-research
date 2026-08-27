@@ -14,6 +14,14 @@
 static void h2_install_input_compatibility(
     volatile unsigned int *compat,
     const volatile unsigned int *native);
+#ifdef H2_S1_GUI_COMPAT
+static int h2_s1_gui_7e0(unsigned int a0, unsigned int a1, unsigned int a2);
+static int h2_s1_gui_7e4(unsigned int a0, unsigned int a1, unsigned int a2);
+static int h2_s1_gui_7fc(void);
+static int h2_s1_gui_800(void);
+static int h2_s1_gui_834(
+    unsigned int a0, unsigned int a1, volatile unsigned char *output);
+#endif
 #define H1_STAGE_AFTER_GUI_INSTALL(compat, native) \
     h2_install_input_compatibility((compat), (native))
 #define h1_bda_main h2_v1_compat_main
@@ -27,6 +35,110 @@ static volatile h1_u32 h2_horizontal_gpio_previous;
 static volatile h1_u32 h2_simulator_mode;
 static volatile h1_u32 h2_wake_scan_value;
 static volatile h1_u32 h2_wake_messages_remaining;
+
+#ifdef H2_S1_GUI_COMPAT
+typedef int (*h2_s1_gui_forward4_type)(
+    h1_u32 a0, h1_u32 a1, h1_u32 a2, h1_u32 a3);
+static h1_u32 h2_s1_gui_native_084;
+static h1_u32 h2_s1_gui_native_2fc;
+static h1_u32 h2_s1_gui_native_334;
+static h1_u32 h2_s1_gui_native_338;
+static h1_u32 h2_s1_gui_native_378;
+static h1_u32 h2_s1_gui_native_980;
+static h1_u32 h2_s1_gui_native_990;
+static h1_u32 h2_s1_gui_shell_handle;
+
+/* Every native H2 BDA opens one application shell through GUI+0x980 before
+ * creating its first window and closes the returned handle through +0x990.
+ * The wrapper replaces the stock Time BDA, so its small native shell is the
+ * closest H2-owned foreground context for the foreign S1 game.  Spell the
+ * GBK path byte-for-byte to keep the freestanding source encoding-neutral. */
+static const h1_u8 h2_s1_shell_path[] = {
+    'A', ':', '\\', 0xcfu, 0xb5u, 0xcdu, 0xb3u, '\\',
+    0xcau, 0xfdu, 0xbeu, 0xddu, '\\',
+    's', 'h', 'e', 'l', 'l', '\\',
+    'T', 'I', 'M', 'E', '_', 'Z', '.', 'd', 'l', 'x', 0u
+};
+
+static int h2_s1_gui_forward_trace(
+    h1_u32 offset, h1_u32 target,
+    h1_u32 a0, h1_u32 a1, h1_u32 a2, h1_u32 a3)
+{
+    int result = ((h2_s1_gui_forward4_type)target)(a0, a1, a2, a3);
+    trace_event(TRACE_GUI_BASE | offset, a0, a1, a2, a3, (h1_u32)result);
+    return result;
+}
+
+#define H2_S1_FORWARD_WRAPPER(name, offset) \
+    static int h2_s1_gui_##name( \
+        h1_u32 a0, h1_u32 a1, h1_u32 a2, h1_u32 a3) \
+    { \
+        return h2_s1_gui_forward_trace( \
+            (offset), h2_s1_gui_native_##name, a0, a1, a2, a3); \
+    }
+
+H2_S1_FORWARD_WRAPPER(084, 0x084u)
+H2_S1_FORWARD_WRAPPER(2fc, 0x2FCu)
+H2_S1_FORWARD_WRAPPER(334, 0x334u)
+H2_S1_FORWARD_WRAPPER(338, 0x338u)
+H2_S1_FORWARD_WRAPPER(378, 0x378u)
+
+static int h2_s1_gui_7e0(h1_u32 a0, h1_u32 a1, h1_u32 a2)
+{
+    if (h2_s1_gui_shell_handle == 0u && h2_s1_gui_native_980 != 0u) {
+        h2_s1_gui_shell_handle =
+            ((h1_u32 (*)(const char *))h2_s1_gui_native_980)(
+                (const char *)h2_s1_shell_path);
+    }
+    trace_event(TRACE_GUI_BASE | 0x000007E0u, a0, a1, a2,
+        h2_s1_gui_shell_handle, h2_s1_gui_shell_handle);
+    return h2_s1_gui_shell_handle != 0u;
+}
+
+static int h2_s1_gui_7e4(h1_u32 a0, h1_u32 a1, h1_u32 a2)
+{
+    trace_event(TRACE_GUI_BASE | 0x000007E4u, a0, a1, a2, 0u, 1u);
+    return 1;
+}
+
+static int h2_s1_gui_7fc(void)
+{
+    trace_event(TRACE_GUI_BASE | 0x000007FCu, 0u, 0u, 0u, 0u, 1u);
+    return 1;
+}
+
+static int h2_s1_gui_800(void)
+{
+    trace_event(TRACE_GUI_BASE | 0x00000800u, 0u, 0u, 0u, 0u, 1u);
+    return 1;
+}
+
+static int h2_s1_gui_834(h1_u32 a0, h1_u32 a1, volatile h1_u8 *output)
+{
+    h1_u32 index;
+    if (output != (volatile h1_u8 *)0) {
+        for (index = 0u; index < 0x48u; ++index) {
+            output[index] = 0u;
+        }
+    }
+    trace_event(TRACE_GUI_BASE | 0x00000834u, a0, a1,
+        (h1_u32)output, 0u, 1u);
+    return 1;
+}
+
+static void h2_s1_close_shell(void)
+{
+    h1_u32 handle = h2_s1_gui_shell_handle;
+    h1_u32 result = 0u;
+
+    if (handle != 0u && h2_s1_gui_native_990 != 0u) {
+        result = ((h1_u32 (*)(h1_u32))h2_s1_gui_native_990)(handle);
+    }
+    h2_s1_gui_shell_handle = 0u;
+    trace_event(TRACE_GUI_BASE | 0x00000990u,
+        handle, 0u, 0u, 0u, result);
+}
+#endif
 
 #define H2_GPIOC_PIN (*(volatile h1_u32 *)0xb0010200u)
 #define H2_GPIO_LEFT_MASK (1u << 1)
@@ -147,6 +259,64 @@ static void h2_install_input_compatibility(
     h2_wake_scan_value = 0u;
     h2_wake_messages_remaining = 0u;
     compat[0x854u >> 2] = (h1_u32)h2_message_fetch;
+#ifdef H2_S1_GUI_COMPAT
+    /* S1 shares the older H1 V1 GUI layout.  Direct function fingerprints
+     * against the H2 classic OS establish the shifted slots below; leaving
+     * the S1 offsets pointed at same-offset H2 functions corrupts the first
+     * 320x240 pet-manager window before Mission can draw anything. */
+    map_gui(compat, native, 0x074u, 0x070u);
+    h2_s1_gui_native_084 = native[0x07Cu >> 2];
+    compat[0x084u >> 2] = (h1_u32)h2_s1_gui_084;
+    map_gui(compat, native, 0x088u, 0x080u);
+    map_gui(compat, native, 0x08Cu, 0x084u);
+    map_gui(compat, native, 0x0E0u, 0x0D8u);
+    map_gui(compat, native, 0x0E4u, 0x0DCu);
+    map_gui(compat, native, 0x0E8u, 0x0E0u);
+    map_gui(compat, native, 0x134u, 0x12Cu);
+    map_gui(compat, native, 0x17Cu, 0x174u);
+    map_gui(compat, native, 0x1A8u, 0x1A0u);
+    map_gui(compat, native, 0x1ACu, 0x1A4u);
+    map_gui(compat, native, 0x1B0u, 0x1A8u);
+    h2_s1_gui_native_2fc = native[0x2F4u >> 2];
+    compat[0x2FCu >> 2] = (h1_u32)h2_s1_gui_2fc;
+    map_gui(compat, native, 0x304u, 0x2FCu);
+    map_gui(compat, native, 0x30Cu, 0x304u);
+    map_gui(compat, native, 0x310u, 0x308u);
+    map_gui(compat, native, 0x314u, 0x30Cu);
+    map_gui(compat, native, 0x328u, 0x320u);
+    map_gui(compat, native, 0x32Cu, 0x324u);
+    map_gui(compat, native, 0x330u, 0x328u);
+    h2_s1_gui_native_334 = native[0x32Cu >> 2];
+    compat[0x334u >> 2] = (h1_u32)h2_s1_gui_334;
+    h2_s1_gui_native_338 = native[0x330u >> 2];
+    compat[0x338u >> 2] = (h1_u32)h2_s1_gui_338;
+    map_gui(compat, native, 0x33Cu, 0x334u);
+    map_gui(compat, native, 0x358u, 0x350u);
+    map_gui(compat, native, 0x374u, 0x36Cu);
+    h2_s1_gui_native_378 = native[0x370u >> 2];
+    compat[0x378u >> 2] = (h1_u32)h2_s1_gui_378;
+    map_gui(compat, native, 0x388u, 0x380u);
+    map_gui(compat, native, 0x414u, 0x40Cu);
+    map_gui(compat, native, 0x4D0u, 0x4C8u);
+    map_gui(compat, native, 0x4D4u, 0x4CCu);
+    map_gui(compat, native, 0x544u, 0x534u);
+    map_gui(compat, native, 0x57Cu, 0x56Cu);
+    map_gui(compat, native, 0x584u, 0x574u);
+    map_gui(compat, native, 0x834u, 0x720u);
+
+    /* S1's high-level runtime slots do not share H2's V2
+     * semantics.  The 9588 port established these return-success shims as the
+     * minimum safe boundary; its embedded-font build subsequently replaces
+     * 0x834 with its full glyph implementation. */
+    compat[0x7E0u >> 2] = (h1_u32)h2_s1_gui_7e0;
+    compat[0x7E4u >> 2] = (h1_u32)h2_s1_gui_7e4;
+    compat[0x7FCu >> 2] = (h1_u32)h2_s1_gui_7fc;
+    compat[0x800u >> 2] = (h1_u32)h2_s1_gui_800;
+    compat[0x834u >> 2] = (h1_u32)h2_s1_gui_834;
+    h2_s1_gui_native_980 = native[0x980u >> 2];
+    h2_s1_gui_native_990 = native[0x990u >> 2];
+    h2_s1_gui_shell_handle = 0u;
+#endif
 }
 
 #define H2_HEAP_END (*(volatile h1_u32 *)0x8019f410u)
@@ -156,7 +326,9 @@ static void h2_install_input_compatibility(
 #define H2_HEAP_CURSOR (*(volatile h1_u32 *)0x8019f420u)
 
 #define H2_NATIVE_HEAP_END 0x81c30000u
+#ifndef H2_MISSION_HEAP_END
 #define H2_MISSION_HEAP_END 0x81c00000u
+#endif
 #define H2_HEAP_MAX_RECORDS 2048u
 #define H2_HEAP_SNAPSHOT (H1_STAGE_DATA + 0x40u)
 #define H2_HEAP_SNAPSHOT_MAGIC 0x48324850u
@@ -303,12 +475,19 @@ int h1_bda_main(const h1_u8 *game_source, h1_u32 game_size)
     if (!h2_relocate_heap_records()) {
         return -2;
     }
+#ifndef H2_KEEP_NATIVE_SCREEN
     if (!h2_enter_argb_screen()) {
         h2_restore_heap_records();
         return -3;
     }
+#endif
     result = h2_v1_compat_main(game_source, game_size);
+#ifdef H2_S1_GUI_COMPAT
+    h2_s1_close_shell();
+#endif
+#ifndef H2_KEEP_NATIVE_SCREEN
     h2_restore_native_screen();
+#endif
     h2_restore_heap_records();
     return result;
 }

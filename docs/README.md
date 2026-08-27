@@ -37,8 +37,17 @@ accidentally mixed with assumptions copied from H2 or 9588.
   and emulator state.
 - [17-v1-validation.md](17-v1-validation.md): verified V1.41 inputs and runtime
   reproduction state.
+- [18-codex-migration.md](18-codex-migration.md): historical Codex workspace
+  migration notes; use document 22 for the current continuation state.
 - [19-v1-v2-mission-handoff.md](19-v1-v2-mission-handoff.md): live V1-game-on-V2
   compatibility status; the historical filename is retained for stable links.
+- [20-v2-game-release.md](20-v2-game-release.md): the complete A/B guest paths,
+  checked rewrites, and validation boundary for the seven V1 games on H1 V2.
+- [21-v1-flying-video-port.md](21-v1-flying-video-port.md): the H1 2.X Flying
+  Video player compatibility port to H1 V1.41.
+- [22-current-project-handoff.md](22-current-project-handoff.md): current H1
+  1.X/2.X and H2 results, active private-image state, unresolved work, and the
+  canonical continuation guide for another AI.
 
 ## Current phase
 
@@ -76,6 +85,9 @@ help, file-picker, and full advertisement AVI regression under Windows-on-Arm.
 Exact key-matrix wiring and the remaining board-level peripheral details remain
 the active reverse-engineering items.
 
-The final emulator target is Windows x86-64 for Intel/AMD PCs. The ARM64 QEMU
-binary is a development-host validation aid only; the packaged x86-64 binary
-is the tested delivery artifact.
+The x86-64 emulator was a historically tested delivery target. The user later
+retired and removed local x86-64 runtime artifacts; current testing and storage
+policy retain only the native Windows ARM64 H1 and H2 runtimes. Historical
+x86-64 results remain evidence, but a new AI must not rebuild or restore that
+runtime unless the user explicitly changes scope. See
+`22-current-project-handoff.md` for the current cross-machine state.

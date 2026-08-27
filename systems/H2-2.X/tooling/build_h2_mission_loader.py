@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build the H2-native wrapper for the original H1 V1 Mission payload."""
+"""Build an H2-native wrapper for a supported Mission payload."""
 
 from __future__ import annotations
 
@@ -24,10 +24,40 @@ from h1_bda.validate import validate_bda  # noqa: E402
 
 H2_ENTRY_VA = 0x81C30040
 STAGE_VA = 0x83F00000
-EMBEDDED_GAME_SIZE = 0x79374
-H2_GAME_SHA256 = (
-    "5D505D6C68ED6C4B93977B057937A625803B9F67801A2A7E43B5A1F8BA1AAEA6"
-)
+PAYLOAD_VARIANTS = {
+    "h1-v1": {
+        "size": 0x79374,
+        "sha256": "5D505D6C68ED6C4B93977B057937A625803B9F67801A2A7E43B5A1F8BA1AAEA6",
+        "defines": (),
+        "description": "H2 Mission compat",
+    },
+    "s1-9588": {
+        "size": 1801028,
+        "sha256": "74539915BEBF22150D86894FC74496A7A5AB6332B64F7E1F6F66AE5727B66826",
+        "defines": (
+            "H1_PREFIX_ADDRESS=0x81C00000u",
+            "H1_GAME_LOAD_ADDRESS=0x81BF6A28u",
+            "H1_GAME_ENTRY_ADDRESS=0x81C00020u",
+            "H2_MISSION_HEAP_END=0x81BF6A20u",
+            "H2_KEEP_NATIVE_SCREEN=1",
+            "H2_S1_GUI_COMPAT=1",
+        ),
+        "description": "H2 S1 Mission",
+    },
+    "s1-original": {
+        "size": 654696,
+        "sha256": "C994ED436866FAC9BCC2AB88A5E1ECCAE6C4C33FC91A9C8CFBE9AA3E513262E7",
+        "defines": (
+            "H1_PREFIX_ADDRESS=0x81C00000u",
+            "H1_GAME_LOAD_ADDRESS=0x81BFB93Cu",
+            "H1_GAME_ENTRY_ADDRESS=0x81C00020u",
+            "H2_MISSION_HEAP_END=0x81BFB930u",
+            "H2_KEEP_NATIVE_SCREEN=1",
+            "H2_S1_GUI_COMPAT=1",
+        ),
+        "description": "H2 S1 Mission",
+    },
+}
 EXTERNAL_PATH = "A:\\V1GAME.BIN"
 
 
@@ -61,7 +91,7 @@ def _find_zig() -> Path:
     raise SystemExit("cannot find Zig; set H2_ZIG to an ARM64 Zig executable")
 
 
-def _find_objcopy() -> Path:
+def _find_objcopy() -> Path | None:
     configured = os.environ.get("H2_LLVM_OBJCOPY")
     candidates = [
         Path(configured) if configured else Path("__not_configured__"),
@@ -79,7 +109,7 @@ def _find_objcopy() -> Path:
     for candidate in candidates:
         if candidate.is_file():
             return candidate.resolve()
-    raise SystemExit("cannot find llvm-objcopy; set H2_LLVM_OBJCOPY")
+    return None
 
 
 def _run(command: list[str], label: str, attempts: int = 1) -> None:
@@ -195,8 +225,9 @@ SECTIONS
             ],
             "MIPS linking",
         )
+        objcopy_command = [str(objcopy)] if objcopy is not None else [str(zig), "objcopy"]
         _run(
-            [str(objcopy), "-O", "binary", str(output_elf), str(output_bin)],
+            [*objcopy_command, "-O", "binary", str(output_elf), str(output_bin)],
             "flat binary export",
         )
         if debug_elf is not None:
@@ -205,14 +236,17 @@ SECTIONS
         return output_bin.read_bytes()
 
 
-def _verify_mission_payload(mission_payload: Path) -> bytes:
+def _verify_mission_payload(mission_payload: Path, variant: str) -> bytes:
     payload = mission_payload.read_bytes()
-    if len(payload) != EMBEDDED_GAME_SIZE or _sha256(payload) != H2_GAME_SHA256:
-        raise ValueError("H2-retargeted Mission payload hash mismatch")
+    expected = PAYLOAD_VARIANTS[variant]
+    if len(payload) != expected["size"] or _sha256(payload) != expected["sha256"]:
+        raise ValueError(f"{variant} Mission payload hash mismatch")
     return payload
 
 
-def _compile_h2_entry(payload_size: int, debug_dir: Path | None) -> bytes:
+def _compile_h2_entry(
+    payload_size: int, debug_dir: Path | None, variant: str
+) -> bytes:
     stage_source = (
         REPOSITORY_ROOT / "systems" / "H2-2.X" / "mission" / "h2_mission_stage.c"
     )
@@ -235,7 +269,10 @@ def _compile_h2_entry(payload_size: int, debug_dir: Path | None) -> bytes:
         stage = _compile_sources(
             [stage_source],
             STAGE_VA,
-            defines=[f"H1_GAME_SIZE=0x{payload_size:X}u"],
+            defines=[
+                f"H1_GAME_SIZE=0x{payload_size:X}u",
+                *PAYLOAD_VARIANTS[variant]["defines"],
+            ],
             debug_elf=(debug_dir / "h2-mission-stage.elf") if debug_dir else None,
         )
         if len(stage) & 3:
@@ -264,9 +301,10 @@ def build_loader(
     template_bda: Path,
     output: Path,
     debug_dir: Path | None = None,
+    variant: str = "h1-v1",
 ) -> None:
-    payload = _verify_mission_payload(mission_payload)
-    entry = _compile_h2_entry(len(payload), debug_dir)
+    payload = _verify_mission_payload(mission_payload, variant)
+    entry = _compile_h2_entry(len(payload), debug_dir, variant)
 
     template_source = template_bda.read_bytes()
     template = decode_header(template_source)
@@ -294,7 +332,7 @@ def build_loader(
         fields,
         title="浣垮懡",
         build_time="2026-08-25 00:00:00",
-        description="H2 Mission compat",
+        description=str(PAYLOAD_VARIANTS[variant]["description"]),
     )
     resources = template_source[resource_offset:payload_offset]
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -313,6 +351,7 @@ def build_loader(
     print(f"stage_va=0x{STAGE_VA:08X}")
     print(f"entry_payload=0x{len(entry):X}")
     print(f"mission_payload=0x{len(payload):X}")
+    print(f"variant={variant}")
     print(f"external_path={EXTERNAL_PATH}")
 
 
@@ -321,6 +360,9 @@ def main() -> int:
     parser.add_argument("--mission-payload", type=Path, required=True)
     parser.add_argument("--template-bda", type=Path, required=True)
     parser.add_argument("--debug-dir", type=Path)
+    parser.add_argument(
+        "--variant", choices=tuple(PAYLOAD_VARIANTS), default="h1-v1"
+    )
     parser.add_argument("-o", "--output", type=Path, required=True)
     args = parser.parse_args()
     build_loader(
@@ -328,6 +370,7 @@ def main() -> int:
         args.template_bda,
         args.output,
         args.debug_dir,
+        args.variant,
     )
     return 0
 

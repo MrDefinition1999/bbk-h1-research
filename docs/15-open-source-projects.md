@@ -1,6 +1,6 @@
 # Open-source project structure
 
-Updated: 2026-08-24
+Updated: 2026-08-27
 
 The private research workspace contains vendor packages, raw NAND images,
 toolchains, IDA state, game data, and generated test artifacts. Those files are
@@ -38,6 +38,23 @@ Both repositories include `inputs.lock.json`, `components.lock.json`, a source
 boundary verifier, bilingual entry documentation, and a copy of the public
 research tooling. Their `.local/` directories are ignored and may hold private
 inputs and generated images without making those files publishable.
+
+## H2 V2.2L project
+
+H2 is currently maintained as `systems/H2-2.X` inside
+[`bbk-h1-research`](https://github.com/MrDefinition1999/bbk-h1-research), rather
+than as a third standalone version repository. Commit `eab496d` introduced the
+reproducible H2 V2.2L image builder, verifier, ARM64 runtime, pinned OpenNoah
+QEMU/BootROM components and H2-specific Mission stage. The user-owned 2 GiB
+eMMC, vendor recovery package, QEMU binaries, commercial Mission/S1 data,
+debug traces and sector journals remain ignored local inputs.
+
+The H2 base system is dynamically verified, but neither Mission branch is a
+finished release: the H1 V1 payload reaches menu/story and fails a 32 MiB scene
+allocation, while the current original-S1 payload reaches game code without
+obtaining a visible H2 foreground window. The exact current boundary is
+recorded in `22-current-project-handoff.md`; do not publish either branch as a
+playable H2 port.
 
 ## Shared public components
 

@@ -259,7 +259,7 @@ class H2Runtime:
             details = ""
             if self.process.poll() is not None and self.process.stderr is not None:
                 details = self.process.stderr.read().decode("utf-8", "replace").strip()
-            self.stop()
+            self.stop_process()
             suffix = f": {details[-2000:]}" if details else ""
             raise RuntimeError(f"{error}{suffix}") from error
 
@@ -300,24 +300,49 @@ class H2Runtime:
         if self.process is not process or process.poll() is not None or self.vnc_port is None:
             return
         try:
+            # H2 briefly displays the launcher while touch dispatch is still
+            # blocked by a post-boot task.  Its dead interval is about five
+            # seconds; keep a fixed six-second guard before the first input.
+            if self.stop_event.wait(6.0):
+                return
+            # Match the proven H1 V2 navigation sequence.  The clipped
+            # Tools/Entertainment tab does not reliably accept a direct hit
+            # while Dictionary is selected, so select its adjacent tab first.
+            # H2 has two Tools/Entertainment pages.  Re-selecting the tab
+            # above normalizes it to page one, and one deliberate page-down
+            # selection reaches the final page containing Mission's clock.
+            for _press in range(5):
+                self.send_key("esc")
+                if self.stop_event.wait(1.2):
+                    return
             steps = (
-                ("more-functions", ((458, 255), (458, 255)), 1.8),
-                ("tools-entertainment", ((420, 254), (420, 254)), 3.0),
+                ("more-functions", ((420, 258),), 2.5),
                 (
-                    "mission-page",
-                    ((456, 205), (456, 210), (456, 215), (456, 220), (456, 225)),
-                    2.0,
+                    "adjacent-category",
+                    ((380, 258), (390, 258)),
+                    1.5,
+                ),
+                (
+                    "tools-entertainment",
+                    ((430, 258), (440, 258)),
+                    1.5,
+                ),
+                (
+                    "mission-page-1",
+                    ((455, 216),),
+                    3.0,
                 ),
             )
             for state, points, settle_seconds in steps:
                 if self.process is not process or process.poll() is not None:
                     return
-                # The H2 UI occasionally drops a short touch while changing
-                # pages.  These bounded retries are safe: after a successful hit,
-                # every remaining point is selected-category or empty-page space.
                 for attempt, (x, y) in enumerate(points, 1):
                     send_vnc_tap(self.vnc_port, x, y)
                     self.mission_page_navigation = f"{state}-{attempt}"
+                    if state.startswith("mission-page"):
+                        if self.stop_event.wait(0.3):
+                            return
+                        self.send_key("ret")
                     if self.stop_event.wait(0.8):
                         return
                 if self.stop_event.wait(settle_seconds):
@@ -339,6 +364,14 @@ class H2Runtime:
         if key in ("left", "right"):
             wake_key = "volumedown" if key == "left" else "volumeup"
             self.hmp(f"sendkey {wake_key} {min(duration_ms + 30, 2000)}")
+
+    def send_tap(self, x: int, y: int, hold_ms: int = 550) -> None:
+        if self.vnc_port is None:
+            raise RuntimeError("QEMU did not publish a VNC port")
+        if not 0 <= int(x) < 480 or not 0 <= int(y) < 272:
+            raise ValueError("tap must stay inside the 480x272 H2 display")
+        hold_ms = max(80, min(int(hold_ms), 2000))
+        send_vnc_tap(self.vnc_port, int(x), int(y), hold_ms / 1000.0)
 
     def debug_memory(self, address: int, count: int) -> str:
         """Read a small, bounded physical-RAM window through QEMU HMP."""
@@ -472,6 +505,14 @@ def make_handler(runtime: H2Runtime, web_root: Path) -> type[SimpleHTTPRequestHa
                     runtime.send_key(str(request.get("key", "")), int(request.get("duration", 120)))
                     self.send_json({"ok": True})
                     return
+                if path == "/api/tap":
+                    runtime.send_tap(
+                        int(request.get("x", -1)),
+                        int(request.get("y", -1)),
+                        int(request.get("hold", 550)),
+                    )
+                    self.send_json({"ok": True})
+                    return
                 if path in ("/api/reset", "/api/restart"):
                     runtime.restart()
                     self.send_json({"ok": True})
@@ -532,7 +573,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--mission-page-delay",
         type=float,
-        default=30.0,
+        default=35.0,
         help="seconds to wait for the native desktop before --mission-page taps",
     )
     return parser.parse_args()

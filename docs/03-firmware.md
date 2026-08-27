@@ -109,9 +109,13 @@ CRC-32 for any of the 482 payloads, so its precise semantics remain open.
 `alldir1.dat` uses the same 16-byte/XOR envelope and decodes to 51 required
 `A:\\...` directories.
 
-The repeatable parser and full-content verifier is
-[`../scripts/inspect_pc_payload.py`](../scripts/inspect_pc_payload.py). Its
-machine-readable result is generated as `work/analysis/pc-payload-report.json`.
+The early `inspect_pc_payload.py` prototype was not retained. The maintained
+V2 indexed-member extractor is
+[`../scripts/extract_h1_v2_pc_member.py`](../scripts/extract_h1_v2_pc_member.py),
+with the authoritative reconstruction and verification workflow recorded in
+[`16-v2-system.md`](16-v2-system.md). The historical machine-readable result
+was generated as `work/analysis/pc-payload-report.json` and remains a private
+research artifact rather than a source dependency.
 
 ## Address hypotheses to validate
 

@@ -1,6 +1,29 @@
 # Workspace storage and artifact policy
 
-Last updated: 2026-08-18 (Asia/Irkutsk)
+Last updated: 2026-08-27 (Asia/Irkutsk)
+
+## 2026-08-27 ARM64-only and H2 experiment snapshot
+
+The user retired the x86-64 emulator after the earlier validation work. No
+`emulator/windows-x86_64` runtime is present now; the maintained local runtime
+directories are `emulator/windows-arm64` for H1 and `emulator/h2` for H2.
+Historical x86-64 results below remain evidence, not a retention requirement.
+
+At this snapshot the H1 ARM64 runtime is approximately 1.133 GB and the H2
+runtime approximately 2.169 GB. Their dominant files are the private H1
+1,107,296,256-byte NAND and H2 2,147,483,648-byte eMMC. The active H2 image is
+an original-S1 Mission foreground experiment with SHA-256
+`F36A081422CFBC4C369652C93284A458842A4E421039ED5247A75A119786FC4C`,
+not the clean base image and not a playable result.
+
+`work/h2` also retains the reproducible Zig toolchain (about 675 MB), lawful
+Mission/S1 inputs, analysis output and exact sector journals. The current H2
+image depends on the journal chain under `work/h2/s1-resource-test`; do not
+remove those manifests or journals until the image is rebuilt from clean
+inputs or deliberately discarded. Generated screenshots, PPMs, `__pycache__`
+and superseded debug ELF files remain cleanup candidates after their findings
+are documented. The complete active-image and rollback state is recorded in
+`22-current-project-handoff.md`.
 
 ## 2026-08-18 source-project split cleanup
 
